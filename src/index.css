@@ -82,21 +82,23 @@ body, button, input, select, textarea {
   text-shadow: 0 0 10px rgba(52, 211, 153, 0.35);
 }
 
-/* --- الضبط الهندسي الدقيق للشريط العلوي ليتطابق مع الصورة تماماً --- */
+/* --- التنسيق الاحترافي الكامل للـ Header والشريط العلوي --- */
 .top-bar {
   position: sticky !important;
   top: 0 !important;
   z-index: 9999 !important;
   width: 100% !important;
-  /* تكييف البادينغ العلوي بدقة شديدة: يأخذ مساحة الأمان للآيفون مع إضافة بسيطة جداً (6 بكسل فقط) لكي لا تلتصق الأيقونات بالحافة وتكون مرتبة تماماً مثل الصورة */
-  padding-top: calc(env(safe-area-inset-top, 0px) + 6px) !important;
-  padding-bottom: 8px !important;
+  /* مساحة أمان علوية دقيقة تتخطى نوتش وجزيرة الآيفون بسلاسة */
+  padding-top: calc(env(safe-area-inset-top, 15px) + 8px) !important;
+  padding-bottom: 10px !important;
   padding-left: 16px !important;
   padding-right: 16px !important;
   background-color: #0b1f14 !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  direction: ltr !important; /* تثبيت اتجاه الأيقونات والعناصر لمنع انعكاسها */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .dark .top-bar {
