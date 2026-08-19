@@ -1,0 +1,10 @@
+{
+  "name": "Remix: Noor Al-Islam",
+  "description": "Comprehensive Islamic app by Loay bin Hussein featuring Quran, Adhkar, and prayer times. Dedicated as a Sadaqah Jariyah.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
