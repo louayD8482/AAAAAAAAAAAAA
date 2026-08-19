@@ -82,23 +82,22 @@ body, button, input, select, textarea {
   text-shadow: 0 0 10px rgba(52, 211, 153, 0.35);
 }
 
-/* --- التنسيق الاحترافي الكامل للـ Header والشريط العلوي --- */
+/* --- الضبط النهائي الهندسي الدقيق للشريط العلوي ليتطابق مع طلبك تماماً --- */
 .top-bar {
   position: sticky !important;
   top: 0 !important;
   z-index: 9999 !important;
   width: 100% !important;
-  /* مساحة أمان علوية دقيقة تتخطى نوتش وجزيرة الآيفون بسلاسة */
-  padding-top: calc(env(safe-area-inset-top, 15px) + 8px) !important;
-  padding-bottom: 10px !important;
+  /* اعتماد مساحة الأمان الحقيقية للآيفون مع إضافة بسيطة جداً (8px) لتنزل الأيقونات تحت الجزيرة التفاعلية والساعة بمسافة مثالية ومريحة */
+  padding-top: calc(env(safe-area-inset-top, 20px) + 8px) !important;
+  padding-bottom: 12px !important;
   padding-left: 16px !important;
   padding-right: 16px !important;
   background-color: #0b1f14 !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  direction: ltr !important; /* تثبيت اتجاه الأيقونات والعناصر لمنع انعكاسها */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .dark .top-bar {
