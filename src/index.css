@@ -82,22 +82,21 @@ body, button, input, select, textarea {
   text-shadow: 0 0 10px rgba(52, 211, 153, 0.35);
 }
 
-/* --- التنسيق الاحترافي والمتوازن للشريط العلوي لجميع الأجهزة بدون تداخل --- */
+/* --- الضبط الهندسي الدقيق للشريط العلوي ليتطابق مع الصورة تماماً --- */
 .top-bar {
   position: sticky !important;
   top: 0 !important;
   z-index: 9999 !important;
   width: 100% !important;
-  /* ضبط المسافة العلوية لتأخذ مساحة أمان الآيفون تلقائياً مع إضافة 10px مضبوطة تماماً لمنع التصاق الأيقونات بالساعة */
-  padding-top: max(env(safe-area-inset-top), 14px) !important;
-  padding-bottom: 12px !important;
+  /* تكييف البادينغ العلوي بدقة شديدة: يأخذ مساحة الأمان للآيفون مع إضافة بسيطة جداً (6 بكسل فقط) لكي لا تلتصق الأيقونات بالحافة وتكون مرتبة تماماً مثل الصورة */
+  padding-top: calc(env(safe-area-inset-top, 0px) + 6px) !important;
+  padding-bottom: 8px !important;
   padding-left: 16px !important;
   padding-right: 16px !important;
   background-color: #0b1f14 !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .dark .top-bar {
