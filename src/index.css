@@ -20,7 +20,6 @@ html, body {
   margin: 0;
   padding: 0;
   background-color: #0b1f14;
-  /* إلغاء أي فراغات وتعبئة الشاشة بالكامل بالطول */
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -83,14 +82,14 @@ body, button, input, select, textarea {
   text-shadow: 0 0 10px rgba(52, 211, 153, 0.35);
 }
 
-/* --- الضبط الهندسي الصحيح للشريط العلوي لعدم التداخل مع الساعة --- */
+/* --- التنسيق الاحترافي والمتوازن للشريط العلوي لجميع الأجهزة بدون تداخل --- */
 .top-bar {
   position: sticky !important;
   top: 0 !important;
   z-index: 9999 !important;
   width: 100% !important;
-  /* إضافة مساحة كافية بالأعلى (env + 16px إضافية) لكي تنزل الأيقونات تحت الساعة وشريط الحالة ولا تلتصق بحافة الشاشة */
-  padding-top: calc(16px + env(safe-area-inset-top, 20px)) !important;
+  /* ضبط المسافة العلوية لتأخذ مساحة أمان الآيفون تلقائياً مع إضافة 10px مضبوطة تماماً لمنع التصاق الأيقونات بالساعة */
+  padding-top: max(env(safe-area-inset-top), 14px) !important;
   padding-bottom: 12px !important;
   padding-left: 16px !important;
   padding-right: 16px !important;
@@ -98,6 +97,7 @@ body, button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .dark .top-bar {
