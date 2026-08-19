@@ -19,6 +19,12 @@ html, body {
   touch-action: manipulation;
   margin: 0;
   padding: 0;
+  /* ضبط خلفية الشاشة بالكامل لمنع ظهور أي فراغات سوداء */
+  background-color: #0b1f14;
+  height: 100%;
+  /* إضافة مساحات الأمان العلوية والسفلية للآيفون */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 body, button, input, select, textarea {
@@ -109,7 +115,3 @@ body, button, input, select, textarea {
   overflow: hidden !important;
   border-radius: 16px !important;
 }
-
-
-
-
