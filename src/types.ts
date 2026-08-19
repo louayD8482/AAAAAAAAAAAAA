@@ -24,6 +24,7 @@ export interface AppSettings {
   tahajjudReminder?: boolean;
   soundEnabled: boolean;
   customAdhanSound: string; // 'default' or custom tone
+  selectedAdhanVoice?: string; // 'makkah' | 'madinah' | 'alaqsa' | 'qatami' | 'abdulbasit' | 'hadrawi'
   appName?: string;
   dedicationText?: string;
   developerName?: string;

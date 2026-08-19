@@ -34,53 +34,78 @@ export default function VisualAdhanModal({
   isEn = false
 }: VisualAdhanModalProps) {
   const [isPlaying, setIsPlaying] = useState<boolean>(soundEnabled);
+  const [muadhin, setMuadhin] = useState<'makkah' | 'madinah'>('makkah');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const activeNodesRef = useRef<any[]>([]);
 
-  // Function to synthesize beautiful serene spiritual rising chords
+  const ADHAN_SOURCES = {
+    makkah: 'https://cdn.aladhan.com/audio/adhans/adhan_makkah.mp3',
+    madinah: 'https://cdn.aladhan.com/audio/adhans/adhan_madinah.mp3'
+  };
+
+  // Function to play authentic real Adhan audio
+  const playRealAdhan = () => {
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+      }
+      const audio = audioRef.current;
+      audio.src = ADHAN_SOURCES[muadhin];
+      audio.volume = 1.0;
+      audio.play().then(() => {
+        setIsPlaying(true);
+      }).catch((err) => {
+        console.warn('Real Adhan mp3 play blocked, playing synthesized serene chime fallback:', err);
+        playSereneChime();
+      });
+    } catch {
+      playSereneChime();
+    }
+  };
+
+  const stopAdhanAudio = () => {
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      } catch {}
+    }
+    stopChime();
+    setIsPlaying(false);
+  };
+
+  // Function to synthesize beautiful serene spiritual rising chords fallback
   const playSereneChime = () => {
     try {
-      // Close existing context if any
       stopChime();
-
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
-      
       const audioCtx = new AudioCtx();
       audioCtxRef.current = audioCtx;
       activeNodesRef.current = [];
 
-      const playTone = (freq: number, startTime: number, duration: number, volume = 0.04) => {
+      const playTone = (freq: number, startTime: number, duration: number, volume = 0.05) => {
         const osc = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
-        
-        // Choose beautiful warm triangle wave for organic, wooden flute/string resonance
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
-        
-        // Dynamic envelope
         gainNode.gain.setValueAtTime(0, audioCtx.currentTime + startTime);
         gainNode.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + startTime + 0.15);
         gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + startTime + duration);
-        
         osc.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-        
         osc.start(audioCtx.currentTime + startTime);
         osc.stop(audioCtx.currentTime + startTime + duration);
-
         activeNodesRef.current.push(osc);
       };
 
-      // F major/pentatonic spiritual serene progression
-      // F4 (349.23 Hz), A4 (440.00 Hz), C5 (523.25 Hz), F5 (698.46 Hz)
-      playTone(349.23, 0.0, 3.0, 0.04);   // F4 Base
-      playTone(440.00, 0.4, 3.0, 0.04);   // A4
-      playTone(523.25, 0.8, 3.5, 0.04);   // C5
-      playTone(698.46, 1.2, 4.0, 0.03);   // F5
-      
-      // Gentle delayed resonance
-      playTone(880.00, 2.0, 2.5, 0.015);  // A5 high chime
+      playTone(349.23, 0.0, 3.5, 0.05);
+      playTone(440.00, 0.4, 3.5, 0.05);
+      playTone(523.25, 0.8, 4.0, 0.05);
+      playTone(698.46, 1.2, 4.5, 0.04);
+      playTone(880.00, 2.0, 3.0, 0.02);
+      setIsPlaying(true);
     } catch (e) {
       console.log('Chime playback failed:', e);
     }
@@ -103,25 +128,21 @@ export default function VisualAdhanModal({
   // Play immediately if sound is enabled on mount
   useEffect(() => {
     if (isOpen) {
-      setIsPlaying(soundEnabled);
       if (soundEnabled) {
-        // slight delay to bypass browser auto-play block mechanics
         const timer = setTimeout(() => {
-          playSereneChime();
-        }, 300);
+          playRealAdhan();
+        }, 200);
         return () => clearTimeout(timer);
       }
     }
-    return () => stopChime();
-  }, [isOpen]);
+    return () => stopAdhanAudio();
+  }, [isOpen, muadhin]);
 
   const handleToggleSound = () => {
     if (isPlaying) {
-      stopChime();
-      setIsPlaying(false);
+      stopAdhanAudio();
     } else {
-      playSereneChime();
-      setIsPlaying(true);
+      playRealAdhan();
     }
   };
 

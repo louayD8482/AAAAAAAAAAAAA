@@ -15,29 +15,100 @@ export const isIOSPlatform = (): boolean => {
   return Capacitor.getPlatform() === 'ios';
 };
 
+// Available Adhan Muezzin Voices with authentic audio
+export const ADHAN_VOICES = [
+  { id: 'makkah', nameAr: 'أذان الحرم المكي (الشيخ علي ملا)', nameEn: 'Makkah Al-Mukarramah (Ali Mullah)', file: 'adhan_makkah.wav' },
+  { id: 'madinah', nameAr: 'أذان المسجد النبوي (الشيخ عصام بخاري)', nameEn: 'Madinah Al-Munawwarah (Essam Bukhari)', file: 'adhan_madinah.wav' },
+  { id: 'alafasy', nameAr: 'أذان الشيخ مشاري بن راشد العفاسي', nameEn: 'Sheikh Mishary Alafasy', file: 'adhan_alafasy.wav' },
+  { id: 'abdulbasit', nameAr: 'أذان الشيخ عبد الباسط عبد الصمد', nameEn: 'Sheikh Abdulbasit Abdulsamad', file: 'adhan_abdulbasit.wav' },
+  { id: 'alaqsa', nameAr: 'أذان المسجد الأقصى المبارك', nameEn: 'Al-Aqsa Mosque', file: 'adhan_alaqsa.wav' },
+  { id: 'qatami', nameAr: 'أذان الشيخ ناصر القطامي', nameEn: 'Sheikh Nasser Al-Qatami', file: 'adhan_qatami.wav' },
+  { id: 'ghamdi', nameAr: 'أذان الشيخ سعد الغامدي', nameEn: 'Sheikh Saad Al-Ghamdi', file: 'adhan_ghamdi.wav' },
+  { id: 'takbeer', nameAr: 'تكبيرات الأذان فقط (تنبيه ميسر)', nameEn: 'Takbeerat Only (Short Alert)', file: 'adhan_takbeer.wav' }
+];
+
+/**
+ * Register Rich Notification Action Types (Buttons for iOS / Android Notification Center)
+ */
+export const registerRichNotificationActionTypes = async () => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await LocalNotifications.registerActionTypes({
+      types: [
+        {
+          id: 'ADHAN_ACTIONS',
+          actions: [
+            {
+              id: 'open_app',
+              title: 'فتح التطبيق والدعاء 🤲',
+              foreground: true
+            },
+            {
+              id: 'listen_adhan',
+              title: 'الاستماع للأذان 🔊',
+              foreground: true
+            }
+          ]
+        },
+        {
+          id: 'PRAYER_ALERT_ACTIONS',
+          actions: [
+            {
+              id: 'open_app',
+              title: 'تأكيد الاستعداد للصلاة 🕌',
+              foreground: true
+            }
+          ]
+        },
+        {
+          id: 'AZKAR_ACTIONS',
+          actions: [
+            {
+              id: 'read_azkar',
+              title: 'قراءة الأذكار الآن 📖',
+              foreground: true
+            },
+            {
+              id: 'dismiss',
+              title: 'تم بحمد الله ✓',
+              destructive: false,
+              foreground: false
+            }
+          ]
+        }
+      ]
+    });
+  } catch (err) {
+    console.warn('Could not register notification action types:', err);
+  }
+};
+
 /**
  * Request notification permissions across iOS, Android, and Web with native iOS handling
  */
 export const requestAllPermissions = async (): Promise<boolean> => {
   try {
     if (Capacitor.isNativePlatform()) {
-      // 1. Check existing permission
+      // 1. Register Action Types for Rich Notifications
+      await registerRichNotificationActionTypes();
+
+      // 2. Check existing permission
       let permStatus = await LocalNotifications.checkPermissions();
       
-      // 2. Request if not yet granted
+      // 3. Request if not yet granted
       if (permStatus.display !== 'granted') {
         permStatus = await LocalNotifications.requestPermissions();
       }
 
-      // 3. Set up notification channels for iOS and Android
+      // 4. Set up notification channels for Android
       try {
         await LocalNotifications.createChannel({
           id: 'adhan_channel',
-          name: 'تنبيهات الأذان ومواقيت الصلاة',
-          description: 'إشعارات الأذان المسموعة والكاملة عند دخول أوقات الصلوات الخمس',
+          name: 'تنبيهات الأذان ومواقيت الصلاة (الأذان الحقيقي)',
+          description: 'إشعارات الأذان المسموعة والكاملة عند دخول أوقات الصلوات الخمس مع صوت المؤذن المختار',
           importance: 5, // High / Max importance for lockscreen alert
           visibility: 1, // Public visibility on lockscreen
-          sound: 'adhan.wav',
+          sound: 'adhan_makkah.wav',
           vibration: true,
           lights: true,
           lightColor: '#10b981'
@@ -50,10 +121,12 @@ export const requestAllPermissions = async (): Promise<boolean> => {
           importance: 4,
           visibility: 1,
           sound: 'beep.wav',
-          vibration: true
+          vibration: true,
+          lights: true,
+          lightColor: '#f59e0b'
         });
       } catch (channelErr) {
-        // Channels are Android specific; on iOS this is gracefully ignored
+        // Channels are Android specific; on iOS this is handled seamlessly by APNs / UserNotifications
       }
 
       return permStatus.display === 'granted';
@@ -90,6 +163,7 @@ export const checkPermissionsStatus = async (): Promise<'granted' | 'denied' | '
 
 /**
  * Schedule Native Background Lock-screen Push Notifications for iOS / iPhone & Android
+ * Formatted with Rich Notification attributes (distinct titles, sound, icons, and lockscreen preview actions)
  */
 export const scheduleAllNativeNotifications = async (
   prayers: PrayerTime[],
@@ -113,6 +187,80 @@ export const scheduleAllNativeNotifications = async (
     const preOffsetMin = settings.prePrayerMinutes ?? 5;
     const iqamaOffsetMin = settings.iqamaMinutes ?? 10;
 
+    // Resolve selected adhan sound file
+    const selectedVoiceObj = ADHAN_VOICES.find(v => v.id === settings.selectedAdhanVoice) || ADHAN_VOICES[0];
+    const adhanSoundFile = selectedVoiceObj.file;
+
+    const getPrePrayerNotification = (prayerName: string, minutes: number) => {
+      switch (prayerName) {
+        case 'Fajr':
+          return {
+            title: 'الفجر بعد قليل 🕌',
+            body: 'توفيق يومك يبدأ الآن. اقطع انشغالك وتأهب لنداء الفلاح والوضوء. 🌿 اضغط لفتح التطبيق.'
+          };
+        case 'Maghrib':
+          return {
+            title: 'المغرب بعد قليل 🕌',
+            body: 'دقائق وتُفتح أبواب السماء للداعين.. توضأ واستعد. 👈 انقر لتعرف أوقات استجابة الدعاء.'
+          };
+        case 'Isha':
+          return {
+            title: 'العشاء بعد قليل 🕌',
+            body: 'من انتظر الصلاة فهو في صلاة. اغتنم الدقائق وتوضأ لتنال الأجر والبشائر النبوية.'
+          };
+        case 'Dhuhr':
+          return {
+            title: 'الظهر بعد قليل 🕌',
+            body: 'تفتح أبواب السماء عند زوال الشمس.. استعد بالوضوء وأرح قلبك بالصلاة. 🌿'
+          };
+        case 'Asr':
+          return {
+            title: 'العصر بعد قليل 🕌',
+            body: 'الصلاة الوسطى.. حافظ عليها واغتنم عظيم أجرها ونورها في صحيفتك. 🌿'
+          };
+        default:
+          return {
+            title: `اقترب موعد الأذان (${minutes} د) 🕌`,
+            body: `استعد للوضوء وإجابة نداء الصلاة في وقتها.`
+          };
+      }
+    };
+
+    const getAdhanNotification = (prayerName: string, arabicName: string) => {
+      switch (prayerName) {
+        case 'Fajr':
+          return {
+            title: `حان الآن موعد أذان الفجر 🕌 (${selectedVoiceObj.nameAr.split('(')[1]?.replace(')', '') || 'الحرم'})`,
+            body: 'قال ﷺ: «من تطهر فى بيته ثم مشى إلى بيت من بيوت الله، ليقضى فريضة من فرائض الله، كانت خطوتاه إحداهما تحط خطيئة، والأخرى ترفع درجة».'
+          };
+        case 'Maghrib':
+          return {
+            title: `حان الآن موعد أذان المغرب 🕌 (${selectedVoiceObj.nameAr.split('(')[1]?.replace(')', '') || 'الحرم'})`,
+            body: 'قال ﷺ: «من تطهر فى بيته ثم مشى إلى بيت من بيوت الله، ليقضى فريضة من فرائض الله، كانت خطوتاه إحداهما تحط خطيئة، والأخرى ترفع درجة».'
+          };
+        case 'Isha':
+          return {
+            title: 'حان الآن موعد أذان العشاء 🕌',
+            body: 'سُئل ﷺ: أيّ الأعمال أحبّ إلى الله؟ قال: «الصّلاة على وقتها» متفق عليه.'
+          };
+        case 'Dhuhr':
+          return {
+            title: 'حان الآن موعد أذان الظهر 🕌',
+            body: 'قال ﷺ: «إذا نودي بالصلاة فُتحت أبواب السماء واستُجيب الدعاء».'
+          };
+        case 'Asr':
+          return {
+            title: 'حان الآن موعد أذان العصر 🕌',
+            body: 'قال ﷺ: «من صلى البردين دخل الجنة» (البردان: الفجر والعصر).'
+          };
+        default:
+          return {
+            title: `حان الآن موعد أذان صلاة ${arabicName} 🕌`,
+            body: `حيّ على الصلاة، حيّ على الفلاح.. تقبل الله طاعتكم.`
+          };
+      }
+    };
+
     // Schedule for the next 7 days in advance
     for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
       const targetDate = new Date();
@@ -122,42 +270,46 @@ export const scheduleAllNativeNotifications = async (
         if (!prayer.time) return;
         const [pHour, pMin] = prayer.time.split(':').map(Number);
 
-        // A. Pre-Prayer Alert (e.g., 5 mins before)
+        // A. Pre-Prayer Early Reminder (e.g., 5 mins before) with rich action button
         if (prayer.name !== 'Sunrise' && (settings.prePrayerReminder !== false)) {
           const preTime = new Date(targetDate);
           preTime.setHours(pHour, pMin - preOffsetMin, 0, 0);
 
           if (preTime.getTime() > Date.now()) {
+            const preData = getPrePrayerNotification(prayer.name, preOffsetMin);
             notificationsToSchedule.push({
               id: notifIdCounter++,
-              title: `اقترب موعد صلاة ${prayer.arabicName} 🕌 (متبقي ${preOffsetMin} دقائق)`,
-              body: `تنبيه مسبق: صلاة ${prayer.arabicName} ستُرفع قريباً في ${settings.city}. استعد للوضوء وإجابة النداء.`,
+              title: preData.title,
+              body: preData.body,
               schedule: { at: preTime },
               sound: 'beep.wav',
               channelId: 'azkar_channel',
               smallIcon: 'ic_stat_icon',
-              actionTypeId: 'PRAYER_ALERT',
+              iconColor: '#10b981',
+              actionTypeId: 'PRAYER_ALERT_ACTIONS',
               extra: { prayer: prayer.name, type: 'pre-prayer' }
             });
           }
         }
 
-        // B. Exact Adhan Moment Alert (Lock-screen Push on iOS / iPhone)
+        // B. Exact Adhan Moment Alert with selected voice & Rich Actions
         if (settings.adhanReminder) {
           const exactTime = new Date(targetDate);
           exactTime.setHours(pHour, pMin, 0, 0);
 
           if (exactTime.getTime() > Date.now()) {
+            const adhanData = getAdhanNotification(prayer.name, prayer.arabicName);
             notificationsToSchedule.push({
               id: notifIdCounter++,
-              title: `حان الآن موعد صلاة ${prayer.arabicName}.. تقبل الله طاعتكم 🕌`,
-              body: `حان الآن موعد أذان ${prayer.arabicName} في ${settings.city}. حيّ على الصلاة، حيّ على الفلاح.`,
+              title: adhanData.title,
+              body: adhanData.body,
               schedule: { at: exactTime },
-              sound: 'adhan.wav',
+              sound: adhanSoundFile, // Dynamic chosen muezzin adhan audio
               channelId: 'adhan_channel',
               smallIcon: 'ic_stat_icon',
-              actionTypeId: 'ADHAN_ALERT',
-              extra: { prayer: prayer.name, type: 'adhan' }
+              iconColor: '#10b981',
+              actionTypeId: 'ADHAN_ACTIONS',
+              extra: { prayer: prayer.name, type: 'adhan', voice: settings.selectedAdhanVoice }
             });
           }
         }
@@ -170,89 +322,119 @@ export const scheduleAllNativeNotifications = async (
           if (iqamaTime.getTime() > Date.now()) {
             notificationsToSchedule.push({
               id: notifIdCounter++,
-              title: `حان وقت صلاة ${prayer.arabicName} - إقامة الصلاة 🤲`,
-              body: `تذكير: أقيمت صلاة ${prayer.arabicName}. حافظ على صلاتك في جماعة وصلاة السنة.`,
+              title: `🤲 أقيمت الآن صلاة ${prayer.arabicName}`,
+              body: `تذكير بإقامة الصلاة وسنة ${prayer.arabicName}. حافظ على صلاتك في جماعة لنيل عظيم الأجر.`,
               schedule: { at: iqamaTime },
               sound: 'beep.wav',
               channelId: 'azkar_channel',
               smallIcon: 'ic_stat_icon',
+              iconColor: '#10b981',
+              actionTypeId: 'PRAYER_ALERT_ACTIONS',
               extra: { prayer: prayer.name, type: 'iqama' }
             });
           }
         }
       });
 
-      // D. Morning Azkar (06:30 AM)
+      // D. Sleep Azkar Notification (Every night at 09:32 PM)
+      const sleepAzkarTime = new Date(targetDate);
+      sleepAzkarTime.setHours(21, 32, 0, 0);
+      if (sleepAzkarTime.getTime() > Date.now()) {
+        notificationsToSchedule.push({
+          id: notifIdCounter++,
+          title: 'أذكار النوم 🌙',
+          body: 'أعظم آية في القرآن، وقاية لك من الشيطان، لازمها كل ليلة قبل منامك، اقرأها الآن من هنا 👈',
+          schedule: { at: sleepAzkarTime },
+          channelId: 'azkar_channel',
+          sound: 'beep.wav',
+          iconColor: '#38bdf8',
+          actionTypeId: 'AZKAR_ACTIONS',
+          extra: { type: 'sleep_azkar' }
+        });
+      }
+
+      // E. Morning Azkar (06:30 AM)
       if (settings.azkarReminder && (settings.morningAzkarReminder !== false)) {
         const morningAzkarTime = new Date(targetDate);
         morningAzkarTime.setHours(6, 30, 0, 0);
         if (morningAzkarTime.getTime() > Date.now()) {
           notificationsToSchedule.push({
             id: notifIdCounter++,
-            title: 'أذكار الصباح 🌅 (حصنك الحصين)',
-            body: '«أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ» - افتتح يومك بذكر الله وانعم بالبركة والحفظ.',
+            title: '🌅 أذكار الصباح (حصنك الحصين)',
+            body: '«أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ» - افتتح يومك المبارك بذكر الله وانعم بالحفظ والسكينة والبركة.',
             schedule: { at: morningAzkarTime },
             channelId: 'azkar_channel',
-            sound: 'beep.wav'
+            sound: 'beep.wav',
+            iconColor: '#f59e0b',
+            actionTypeId: 'AZKAR_ACTIONS',
+            extra: { type: 'morning_azkar' }
           });
         }
       }
 
-      // E. Evening Azkar (05:00 PM)
+      // F. Evening Azkar (05:00 PM)
       if (settings.azkarReminder && (settings.eveningAzkarReminder !== false)) {
         const eveningAzkarTime = new Date(targetDate);
         eveningAzkarTime.setHours(17, 0, 0, 0);
         if (eveningAzkarTime.getTime() > Date.now()) {
           notificationsToSchedule.push({
             id: notifIdCounter++,
-            title: 'أذكار المساء 🌆 (سكينة وطمأنينة)',
-            body: '«أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ» - حصّن نفسك وأهلك بأذكار المساء.',
+            title: '🌆 أذكار المساء (سكينة وطمأنينة)',
+            body: '«أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ» - حصّن نفسك وأهلك بأذكار المساء النبوية الشريفة.',
             schedule: { at: eveningAzkarTime },
             channelId: 'azkar_channel',
-            sound: 'beep.wav'
+            sound: 'beep.wav',
+            iconColor: '#10b981',
+            actionTypeId: 'AZKAR_ACTIONS',
+            extra: { type: 'evening_azkar' }
           });
         }
       }
 
-      // F. Friday Surah Al-Kahf (Every Friday at 09:00 AM)
+      // G. Friday Surah Al-Kahf (Every Friday at 09:00 AM)
       if (targetDate.getDay() === 5 && (settings.fridayKahfReminder !== false)) {
         const fridayTime = new Date(targetDate);
         fridayTime.setHours(9, 0, 0, 0);
         if (fridayTime.getTime() > Date.now()) {
           notificationsToSchedule.push({
             id: notifIdCounter++,
-            title: 'جمعة مباركة 🕌 (سورة الكهف والصلاة على النبي ﷺ)',
-            body: 'نورٌ ما بين الجمعتين.. لا تنسَ قراءة سورة الكهف والإكثار من الصلاة على النبي ﷺ والدعاء في ساعة الاستجابة.',
+            title: '🕌 جمعة مباركة (سورة الكهف والصلاة على النبي ﷺ)',
+            body: 'نورٌ ما بين الجمعتين.. لا تنسَ قراءة سورة الكهف والإكثار من الصلاة والسلام على رسول الله ﷺ والدعاء في ساعة الاستجابة.',
             schedule: { at: fridayTime },
             channelId: 'azkar_channel',
-            sound: 'beep.wav'
+            sound: 'beep.wav',
+            iconColor: '#10b981',
+            actionTypeId: 'AZKAR_ACTIONS',
+            extra: { type: 'friday_kahf' }
           });
         }
       }
 
-      // G. Tahajjud & Witr (03:30 AM)
+      // H. Tahajjud & Witr (03:30 AM)
       if (settings.tahajjudReminder !== false) {
         const tahajjudTime = new Date(targetDate);
         tahajjudTime.setHours(3, 30, 0, 0);
         if (tahajjudTime.getTime() > Date.now()) {
           notificationsToSchedule.push({
             id: notifIdCounter++,
-            title: 'قيام الليل والوتر 🌙 (الثلth الأخير من الليل)',
-            body: 'ينزل ربنا تبارك وتعالى كل ليلة.. هل من داعٍ فأستجيب له؟ صلاة الوتر ركعة خير من الدنيا وما فيها.',
+            title: '🌙 قيام الليل والوتر (الثلث الأخير من الليل)',
+            body: 'ينزل ربنا تبارك وتعالى إلى السماء الدنيا كل ليلة.. هل من تائب فأتوب عليه؟ صلاة الوتر ركعة خير من الدنيا وما فيها.',
             schedule: { at: tahajjudTime },
             channelId: 'azkar_channel',
-            sound: 'beep.wav'
+            sound: 'beep.wav',
+            iconColor: '#6366f1',
+            actionTypeId: 'AZKAR_ACTIONS',
+            extra: { type: 'tahajjud' }
           });
         }
       }
     }
 
     if (notificationsToSchedule.length > 0) {
-      // iOS / Capacitor handles up to 64 local notifications simultaneously
       await LocalNotifications.schedule({
         notifications: notificationsToSchedule.slice(0, 60)
       });
-      console.log(`Successfully scheduled ${notificationsToSchedule.length} native lock-screen notifications for iOS/iPhone.`);
+      console.log(`Successfully scheduled ${notificationsToSchedule.length} native rich lock-screen notifications.`);
     }
   } catch (error) {
     console.error('Failed to schedule native notifications:', error);

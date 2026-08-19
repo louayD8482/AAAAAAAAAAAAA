@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sun, 
@@ -37,7 +37,8 @@ import {
   HardDrive,
   User,
   UserCheck,
-  HeartHandshake
+  HeartHandshake,
+  Search
 } from 'lucide-react';
 
 import { AppSettings } from './types';
@@ -58,8 +59,10 @@ import VerseOfTheDay from './components/VerseOfTheDay';
 import ProfileSection from './components/ProfileSection';
 import EhsanIslamicPlatformSection from './components/EhsanIslamicPlatformSection';
 import WelcomeSplashScreen from './components/WelcomeSplashScreen';
+import MakkahLiveRadioPlayer from './components/MakkahLiveRadioPlayer';
+import UnifiedSearchFavoritesModal from './components/UnifiedSearchFavoritesModal';
 import { ISLAMIC_AVATARS } from './assets/avatars';
-import { requestAllPermissions, scheduleAllNativeNotifications } from './utils/nativeNotifications';
+import { requestAllPermissions, scheduleAllNativeNotifications, checkPermissionsStatus } from './utils/nativeNotifications';
 
 // @ts-ignore
 import defaultLogo from './assets/images/app_logo_avatar_1787082876013.jpg';
@@ -102,6 +105,7 @@ const PRAYERS_INFO = {
 
 export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isSearchFavModalOpen, setIsSearchFavModalOpen] = useState<boolean>(false);
   const [showWelcomeSplash, setShowWelcomeSplash] = useState<boolean>(() => {
     try {
       return localStorage.getItem('noor_hide_welcome_splash') !== 'true';
@@ -124,7 +128,7 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(() => {
     const stored = localStorage.getItem('noor_settings');
     const defaults = {
-      theme: 'light',
+      theme: 'dark',
       calculationMethod: 'UmmAlQura',
       latitude: null,
       longitude: null,
@@ -482,25 +486,25 @@ export default function App() {
     }
   }, [settings]);
 
-  const handleUpdateSettings = (newSettings: AppSettings) => {
+  const handleUpdateSettings = useCallback((newSettings: AppSettings) => {
     setSettings(newSettings);
-  };
+  }, []);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setSettings(prev => ({
       ...prev,
       theme: prev.theme === 'light' ? 'dark' : 'light'
     }));
-  };
+  }, []);
 
-  const toggleLanguage = () => {
+  const toggleLanguage = useCallback(() => {
     setSettings(prev => ({
       ...prev,
       language: prev.language === 'en' ? 'ar' : 'en'
     }));
-  };
+  }, []);
 
-  const getHijriDate = () => {
+  const getHijriDate = useCallback(() => {
     try {
       const locale = settings.language === 'en' ? 'en-US-u-ca-islamic-umalqura' : 'ar-SA-u-ca-islamic-umalqura';
       return new Intl.DateTimeFormat(locale, {
@@ -511,9 +515,9 @@ export default function App() {
     } catch (e) {
       return settings.language === 'en' ? '25 Rajab 1447 AH' : '٢٥ رجب ١٤٤٧ هـ';
     }
-  };
+  }, [settings.language]);
 
-  const getGregorianDate = () => {
+  const getGregorianDate = useCallback(() => {
     const locale = settings.language === 'en' ? 'en-US' : 'ar-SA';
     return new Date().toLocaleDateString(locale, {
       weekday: 'long',
@@ -521,7 +525,7 @@ export default function App() {
       month: 'long',
       year: 'numeric'
     });
-  };
+  }, [settings.language]);
 
   // Persisted Daily Worship Tracker
   const [dailyPrayers, setDailyPrayers] = useState<{ [key: string]: boolean }>(() => {
@@ -550,6 +554,44 @@ export default function App() {
 
   // Daily open streak counter
   const [streakDays, setStreakDays] = useState<number>(1);
+
+  // Notification Permission Status
+  const [notificationStatus, setNotificationStatus] = useState<string>('غير محدد');
+
+  const checkInitialPermissions = async () => {
+    try {
+      const status = await checkPermissionsStatus();
+      if (status === 'granted') {
+        setNotificationStatus(settings.language === 'en' ? 'Enabled Successfully ✅' : 'مفعلة بنجاح ✅');
+      } else if (status === 'denied') {
+        setNotificationStatus(settings.language === 'en' ? 'Denied ❌' : 'مرفوضة ❌');
+      } else {
+        setNotificationStatus(settings.language === 'en' ? 'Not Configured' : 'غير محدد');
+      }
+    } catch {
+      setNotificationStatus('غير محدد');
+    }
+  };
+
+  const handleRequestNotificationPermissions = async () => {
+    try {
+      const granted = await requestAllPermissions();
+      if (granted) {
+        setNotificationStatus(settings.language === 'en' ? 'Enabled Successfully ✅' : 'مفعلة بنجاح ✅');
+        const { computedPrayers } = getNextPrayerInfo();
+        await scheduleAllNativeNotifications(computedPrayers, settings);
+      } else {
+        setNotificationStatus(settings.language === 'en' ? 'Denied ❌' : 'مرفوضة ❌');
+      }
+    } catch (error) {
+      console.log('Error requesting permissions:', error);
+      setNotificationStatus('مرفوضة ❌');
+    }
+  };
+
+  useEffect(() => {
+    checkInitialPermissions();
+  }, []);
 
   // Quick electronic Tasbih state
   const [quickTasbihCount, setQuickTasbihCount] = useState<number>(() => {
@@ -688,12 +730,12 @@ export default function App() {
   };
 
   // Cycle quote wheel
-  const cycleQuote = () => {
+  const cycleQuote = useCallback(() => {
     setQuoteIndex(prev => (prev + 1) % CURATED_INSPIRATIONS.length);
-  };
+  }, []);
 
-  // Calculate Next Prayer countdown
-  const getNextPrayerInfo = () => {
+  // Compute standard day prayer times
+  const computedPrayers = useMemo(() => {
     const { city } = findCountryAndCity(settings.country, settings.city);
     const base = city.baseTimes;
     const today = new Date();
@@ -718,49 +760,86 @@ export default function App() {
       return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
 
-    const computedPrayers = [
-      { name: 'Fajr', arabic: isEn ? 'Fajr' : 'الفجر', time: formatAndShift(base.Fajr, seasonalShift) },
-      { name: 'Sunrise', arabic: isEn ? 'Sunrise' : 'الشروق', time: formatAndShift(base.Sunrise, seasonalShift - 5) },
-      { name: 'Dhuhr', arabic: isEn ? 'Dhuhr' : 'الظهر', time: formatAndShift(base.Dhuhr, seasonalShift + 3) },
-      { name: 'Asr', arabic: isEn ? 'Asr' : 'العصر', time: formatAndShift(base.Asr, seasonalShift + 8) },
-      { name: 'Maghrib', arabic: isEn ? 'Maghrib' : 'المغرب', time: formatAndShift(base.Maghrib, seasonalShift + 2) },
-      { name: 'Isha', arabic: isEn ? 'Isha' : 'العشاء', time: formatAndShift(base.Isha, seasonalShift + 1) },
+    return [
+      { name: 'Fajr', arabic: isEn ? 'Fajr' : 'الفجر', arabicName: isEn ? 'Fajr' : 'الفجر', time: formatAndShift(base.Fajr, seasonalShift), isPassed: false, isNext: false },
+      { name: 'Sunrise', arabic: isEn ? 'Sunrise' : 'الشروق', arabicName: isEn ? 'Sunrise' : 'الشروق', time: formatAndShift(base.Sunrise, seasonalShift - 5), isPassed: false, isNext: false },
+      { name: 'Dhuhr', arabic: isEn ? 'Dhuhr' : 'الظهر', arabicName: isEn ? 'Dhuhr' : 'الظهر', time: formatAndShift(base.Dhuhr, seasonalShift + 3), isPassed: false, isNext: false },
+      { name: 'Asr', arabic: isEn ? 'Asr' : 'العصر', arabicName: isEn ? 'Asr' : 'العصر', time: formatAndShift(base.Asr, seasonalShift + 8), isPassed: false, isNext: false },
+      { name: 'Maghrib', arabic: isEn ? 'Maghrib' : 'المغرب', arabicName: isEn ? 'Maghrib' : 'المغرب', time: formatAndShift(base.Maghrib, seasonalShift + 2), isPassed: false, isNext: false },
+      { name: 'Isha', arabic: isEn ? 'Isha' : 'العشاء', arabicName: isEn ? 'Isha' : 'العشاء', time: formatAndShift(base.Isha, seasonalShift + 1), isPassed: false, isNext: false },
     ];
+  }, [settings.country, settings.city, isEn]);
 
-    const now = new Date();
-    const currentMins = now.getHours() * 60 + now.getMinutes();
+  // Calculate Next Prayer countdown with live seconds & progress
+  const getNextPrayerInfo = useCallback(() => {
+    const now = currentTime;
+    const currentSecs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
 
     let nextPrayer = computedPrayers[0];
-    let minDiff = 24 * 60;
+    let prevPrayer = computedPrayers[computedPrayers.length - 1];
+    let minDiffSecs = 24 * 3600;
 
-    for (const p of computedPrayers) {
+    for (let i = 0; i < computedPrayers.length; i++) {
+      const p = computedPrayers[i];
       const [hStr, mStr] = p.time.split(':');
-      const pMins = parseInt(hStr) * 60 + parseInt(mStr);
-      let d = pMins - currentMins;
+      const pSecs = parseInt(hStr) * 3600 + parseInt(mStr) * 60;
+      let d = pSecs - currentSecs;
       if (d < 0) {
-        d += 24 * 60;
+        d += 24 * 3600;
       }
-      if (d < minDiff) {
-        minDiff = d;
+      if (d < minDiffSecs) {
+        minDiffSecs = d;
         nextPrayer = p;
+        const prevIdx = (i - 1 + computedPrayers.length) % computedPrayers.length;
+        prevPrayer = computedPrayers[prevIdx];
       }
     }
 
-    const remHours = Math.floor(minDiff / 60);
-    const remMins = minDiff % 60;
+    const remHours = Math.floor(minDiffSecs / 3600);
+    const remMins = Math.floor((minDiffSecs % 3600) / 60);
+    const remSecs = minDiffSecs % 60;
+
+    // Synchronized progress calculation
+    const [prevH, prevM] = prevPrayer.time.split(':');
+    const [nextH, nextM] = nextPrayer.time.split(':');
+    let prevTotal = parseInt(prevH) * 3600 + parseInt(prevM) * 60;
+    let nextTotal = parseInt(nextH) * 3600 + parseInt(nextM) * 60;
+    if (nextTotal <= prevTotal) nextTotal += 24 * 3600;
+    const totalIntervalSecs = Math.max(1, nextTotal - prevTotal);
+    const elapsedSecs = Math.max(0, totalIntervalSecs - minDiffSecs);
+    const progressPercent = Math.min(100, Math.max(0, Math.round((elapsedSecs / totalIntervalSecs) * 100)));
     
     return {
       nextPrayer,
       remHours,
       remMins,
+      remSecs,
+      progressPercent,
       computedPrayers
     };
-  };
+  }, [computedPrayers, currentTime]);
 
-  const { nextPrayer, remHours, remMins } = getNextPrayerInfo();
+  const { nextPrayer, remHours, remMins, remSecs, progressPercent } = useMemo(() => {
+    return getNextPrayerInfo();
+  }, [getNextPrayerInfo]);
 
-  // Sections definitions for vertical layout
-  const sections = [
+  const handleNavigateToSection = useCallback((sectionId: string | null) => {
+    setActiveSection(sectionId);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    if (sectionId) {
+      setTimeout(() => {
+        const el = document.getElementById(`quick-tab-${sectionId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+      }, 50);
+    }
+  }, []);
+
+  // Sections definitions for vertical layout memoized to prevent re-rendering when second tick changes
+  const sections = useMemo(() => [
     {
       id: 'quran',
       title: isEn ? 'Holy Quran & Tafsir' : 'القرآن الكريم وتفسيره',
@@ -849,7 +928,7 @@ export default function App() {
       avatarUrl: ISLAMIC_AVATARS.profile,
       colorClass: 'from-emerald-800 to-teal-700',
       bgLight: 'bg-emerald-800/10 text-emerald-950 border-emerald-800/20',
-      component: <ProfileSection settings={settings} isEn={isEn} onNavigateSection={(sec) => setActiveSection(sec)} />
+      component: <ProfileSection settings={settings} isEn={isEn} onNavigateSection={handleNavigateToSection} />
     },
     {
       id: 'ehsan-charity',
@@ -871,7 +950,13 @@ export default function App() {
       bgLight: 'bg-emerald-900/10 text-emerald-950 border-emerald-900/20',
       component: <AIChatSection isEn={isEn} />
     }
-  ];
+  ], [isEn, settings, handleUpdateSettings, handleNavigateToSection]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [activeSection]);
 
   const currentActiveComponent = sections.find(s => s.id === activeSection)?.component || null;
 
@@ -881,16 +966,16 @@ export default function App() {
       className="min-h-screen bg-[#FCFAF6] dark:bg-[#070D0E] text-slate-800 dark:text-[#E2EAEB] transition-colors duration-500 flex flex-col font-sans islamic-pattern"
       dir={isEn ? "ltr" : "rtl"}
     >
-      {/* Main Premium App Bar with iOS Native Safe-Area */}
-      <header className="sticky top-0 z-40 bg-white/85 dark:bg-[#080E10]/90 backdrop-blur-md border-b border-[#EBE7DF] dark:border-[#142225] px-3 sm:px-8 py-2.5 flex items-center justify-between shadow-xs pt-[env(safe-area-inset-top,0px)] min-h-[calc(3.75rem+env(safe-area-inset-top,0px))]">
+      {/* Main Premium App Bar with iOS Native Safe-Area - STRICT FIXED POSITION */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#080E10]/95 backdrop-blur-xl border-b border-[#EBE7DF] dark:border-[#142225] px-3 sm:px-8 py-3 flex items-center justify-between shadow-md pt-[env(safe-area-inset-top,0px)] h-[4.5rem] sm:h-[5rem]">
         
         {/* Title and Logo */}
         <div 
-          onClick={() => setActiveSection(null)}
-          className="flex items-center gap-2.5 sm:gap-3.5 cursor-pointer hover:opacity-95 active:scale-[0.98] transition-all group"
+          onClick={() => handleNavigateToSection(null)}
+          className="flex items-center gap-3 sm:gap-4 cursor-pointer hover:opacity-95 active:scale-[0.98] transition-all group"
           title={isEn ? "Return to main menu" : "العودة للقائمة الرئيسية"}
         >
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-white shadow-md shadow-emerald-700/10 overflow-hidden border border-emerald-500/30 group-hover:rotate-6 transition-all duration-300 shrink-0 bg-emerald-950">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-700/15 overflow-hidden border-2 border-emerald-500/40 group-hover:rotate-6 transition-all duration-300 shrink-0 bg-emerald-950">
             <img 
               src={settings.appLogoUrl || ISLAMIC_AVATARS.appLogo} 
               alt="Logo" 
@@ -899,14 +984,14 @@ export default function App() {
             />
           </div>
           <div>
-            <h1 className="text-lg sm:text-2xl font-black text-emerald-950 dark:text-emerald-300 font-kufi tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-emerald-950 dark:text-emerald-300 font-kufi tracking-tight leading-tight">
               {settings.appName || (isEn ? "Noor Al-Islam" : "نور الإسلام")}
             </h1>
           </div>
         </div>
 
         {/* Dynamic Hijri & Gregorian clock display (Hidden on extra small screens) */}
-        <div className="hidden lg:flex flex-col items-center justify-center text-center bg-[#F4EFE6]/60 dark:bg-[#0C1517] px-4 py-1.5 rounded-2xl border border-[#E9E1D2]/50 dark:border-[#1A2D31]/50">
+        <div className="hidden lg:flex flex-col items-center justify-center text-center bg-[#F4EFE6]/70 dark:bg-[#0C1517] px-4.5 py-1.5 rounded-2xl border border-[#E9E1D2]/60 dark:border-[#1A2D31]/60">
           <div className="flex items-center gap-2 text-xs font-black text-emerald-900 dark:text-emerald-300">
             <CalendarIcon className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <span className="font-kufi">🌙 {isEn ? "Hijri:" : "الهجري:"} {getHijriDate()}</span>
@@ -918,110 +1003,91 @@ export default function App() {
           </div>
         </div>
 
-        {/* Action Controls - 5 Circular Luxury Avatars Buttons */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        {/* Action Controls - Clean Luxury Buttons matching clean circular green/gold aesthetic */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           
-          {/* 1. Profile / Stats Avatar Button */}
+          {/* 1. Settings Button */}
+          <button
+            id="settings-modal-btn"
+            onClick={() => setIsSettingsOpen(true)}
+            className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            title={isEn ? "Settings & Controls" : "الإعدادات والتخصيص"}
+            aria-label="Settings"
+          >
+            <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
+              <Settings className="w-4 h-4 text-[#2DD4BF]" />
+            </div>
+          </button>
+
+          {/* 2. Share App Button */}
+          <button
+            id="share-app-btn"
+            onClick={handleShareApp}
+            className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            title={isEn ? "Share App" : "مشاركة التطبيق"}
+            aria-label="Share App"
+          >
+            <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
+              <Share2 className="w-4 h-4 text-[#FBBF24]" />
+            </div>
+          </button>
+
+          {/* 3. Profile / Stats Avatar Button */}
           <button
             id="header-profile-btn"
-            onClick={() => setActiveSection('profile')}
-            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border transition-all flex items-center justify-center cursor-pointer active:scale-95 relative shadow-xs group overflow-hidden ${
-              activeSection === 'profile'
-                ? 'border-amber-400 ring-2 ring-amber-400/40 shadow-md scale-105'
-                : 'border-emerald-600/30 hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/20'
+            onClick={() => handleNavigateToSection('profile')}
+            className={`w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer relative flex items-center justify-center shrink-0 ${
+              activeSection === 'profile' ? 'ring-2 ring-amber-400 scale-105' : ''
             }`}
             title={isEn ? "Profile & Worship Statistics" : "الملف الشخصي وإحصائيات العبادة"}
             aria-label="Profile"
           >
-            <img 
-              src={ISLAMIC_AVATARS.profile} 
-              alt="Profile" 
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-              referrerPolicy="no-referrer"
-            />
-            <span className="absolute bottom-0.5 right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-[#080E10] animate-pulse"></span>
+            <div className="w-full h-full rounded-full bg-[#061214] overflow-hidden relative flex items-center justify-center">
+              <img 
+                src={ISLAMIC_AVATARS.profile} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer" 
+              />
+            </div>
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border border-[#061214] rounded-full animate-pulse" />
           </button>
 
-          {/* 2. Language Toggle Avatar Button */}
-          <button
-            id="language-toggle-btn"
-            onClick={toggleLanguage}
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-emerald-600/30 hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/20 transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-xs group overflow-hidden relative"
-            title={isEn ? "Switch to Arabic" : "التحويل للإنجليزية"}
-            aria-label="Toggle Language"
-          >
-            <img 
-              src={ISLAMIC_AVATARS.lang} 
-              alt="Language" 
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-              referrerPolicy="no-referrer"
-            />
-            <span className="absolute inset-0 bg-black/35 flex items-center justify-center text-white font-black text-[8px] sm:text-[10px] font-kufi">
-              {isEn ? "AR" : "EN"}
-            </span>
-          </button>
-
-          {/* 3. Dark/Light Theme Toggle Avatar Button */}
+          {/* 4. Dark/Light Theme Toggle Button */}
           <button
             id="theme-toggle-btn"
             onClick={toggleTheme}
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-emerald-600/30 hover:border-amber-400 hover:ring-2 hover:ring-amber-400/20 transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-xs group overflow-hidden relative"
-            title={isEn ? "Toggle dark mode" : "تبديل المظهر"}
+            className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            title={isEn ? "Toggle theme" : "الإضاءة والمظهر"}
             aria-label="Toggle Theme"
           >
-            <img 
-              src={ISLAMIC_AVATARS.theme} 
-              alt="Theme" 
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-              referrerPolicy="no-referrer"
-            />
-            <span className="absolute bottom-0.5 right-0.5 p-0.5 bg-black/60 rounded-full text-amber-300">
-              {settings.theme === 'dark' ? <Sun className="w-2 h-2 sm:w-2.5 sm:h-2.5" /> : <Moon className="w-2 h-2 sm:w-2.5 sm:h-2.5" />}
-            </span>
+            <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
+              {settings.theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-[#FACC15]" />
+              ) : (
+                <Moon className="w-4 h-4 text-[#FACC15]" />
+              )}
+            </div>
           </button>
 
-          {/* 4. Share App Avatar Button */}
+          {/* 5. Language Toggle Button */}
           <button
-            id="share-app-btn"
-            onClick={handleShareApp}
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-emerald-600/30 hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/20 transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-xs group overflow-hidden relative"
-            title={isEn ? "Share App" : "مشاركة التطبيق ونشره"}
-            aria-label="Share App"
+            id="language-toggle-btn"
+            onClick={toggleLanguage}
+            className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            title={isEn ? "Switch to Arabic" : "تغيير اللغة"}
+            aria-label="Toggle Language"
           >
-            <img 
-              src={ISLAMIC_AVATARS.share} 
-              alt="Share" 
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-              referrerPolicy="no-referrer"
-            />
-            <span className="absolute bottom-0.5 right-0.5 p-0.5 bg-black/60 rounded-full text-emerald-300">
-              <Share2 className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
-            </span>
+            <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
+              <Globe className="w-4 h-4 text-[#34D399]" />
+            </div>
           </button>
 
-          {/* 5. Settings Modal Avatar Button */}
-          <button
-            id="settings-modal-btn"
-            onClick={() => setIsSettingsOpen(true)}
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-emerald-600/30 hover:border-teal-400 hover:ring-2 hover:ring-teal-400/20 transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-xs group overflow-hidden relative"
-            title={isEn ? "Settings & Controls" : "الإعدادات والتخصيص"}
-            aria-label="Settings"
-          >
-            <img 
-              src={ISLAMIC_AVATARS.settings} 
-              alt="Settings" 
-              className="w-full h-full object-cover group-hover:rotate-45 group-hover:scale-110 transition-transform duration-500"
-              referrerPolicy="no-referrer"
-            />
-            <span className="absolute bottom-0.5 right-0.5 p-0.5 bg-black/60 rounded-full text-teal-300">
-              <Settings className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
-            </span>
-          </button>
         </div>
       </header>
 
-      {/* Main Layout Grid */}
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
+      {/* Main Layout Grid with safe offset for fixed Header */}
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 pt-[calc(5.25rem+env(safe-area-inset-top,0px))] sm:pt-[calc(6rem+env(safe-area-inset-top,0px))]">
         <AnimatePresence mode="wait">
           {activeSection === null ? (
             <motion.div
@@ -1039,54 +1105,57 @@ export default function App() {
                 {/* 1. Main Left Area (Column Span 2) */}
                 <div className="lg:col-span-2 space-y-8">
                   
-                  {/* Breathtaking Dome-like Hero Banner */}
+                  {/* Breathtaking Dome-like Hero Banner matching Video exactly */}
                   <div 
                     id="header-hero-banner"
-                    className="w-full min-h-[220px] sm:h-64 rounded-3xl sm:rounded-[2.5rem] overflow-hidden relative shadow-lg border border-[#EBE7DF] dark:border-[#132326] flex flex-col justify-between p-5 sm:p-7 lg:p-8"
+                    className="w-full rounded-3xl sm:rounded-[2.5rem] overflow-hidden relative shadow-xl border border-emerald-500/30 bg-gradient-to-b from-[#0A1D20] via-[#071517] to-[#040C0E] p-6 sm:p-8 flex flex-col items-center text-center space-y-4 text-white"
                   >
-                    {/* Background image */}
-                    <img 
-                      src={settings.headerBgUrl || defaultBanner}
-                      alt="Mosque Banner" 
-                      className="absolute inset-0 w-full h-full object-cover brightness-[0.3] contrast-[1.1]"
-                      referrerPolicy="no-referrer"
-                    />
+                    {/* Golden-emerald glowing ambient aura */}
+                    <div className="absolute top-0 right-1/2 translate-x-1/2 w-64 h-64 bg-amber-400/10 blur-3xl pointer-events-none rounded-full" />
+                    <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:18px_18px] pointer-events-none" />
                     
-                    {/* Golden-emerald glowing overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0A1817]/95 via-[#0A1817]/60 to-black/30"></div>
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400/5 blur-3xl pointer-events-none rounded-full"></div>
-                    
-                    {/* Top Row inside Hero: Greeting & Mobile Date/Time Pill */}
-                    <div className="relative z-10 flex items-center justify-between gap-2.5 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <span className="p-1.5 bg-amber-400/20 rounded-xl text-amber-300 shrink-0">
-                          <Sparkles className="w-4 h-4 animate-pulse" />
-                        </span>
-                        <span className="text-[11px] sm:text-xs font-black tracking-wider text-emerald-300 bg-emerald-950/80 backdrop-blur-md px-3 py-1 rounded-full border border-emerald-500/30">
-                          {getDynamicGreeting()}
-                        </span>
-                      </div>
+                    {/* Top: Bismillah in Golden Line Frame */}
+                    <div className="relative z-10 py-1.5 px-6 rounded-full border border-amber-400/40 bg-amber-400/10 backdrop-blur-md">
+                      <p className="text-xs sm:text-sm font-amiri text-amber-300 font-black tracking-widest">
+                        « بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ »
+                      </p>
+                    </div>
 
-                      {/* Hero Date & Time Unified Single-Line Pill for iPhone screens */}
-                      <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-white/15 text-[11px] sm:text-xs font-semibold text-amber-300 shadow-md">
-                        <span className="font-mono font-black text-white">
-                          {currentTime.toLocaleTimeString(isEn ? 'en-US' : 'ar-EG', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <span className="text-white/30">•</span>
+                    {/* Top Row: Dynamic Greeting Pill & Date Badges */}
+                    <div className="relative z-10 flex flex-wrap items-center justify-center gap-2.5">
+                      <span className="text-xs font-black tracking-wider text-emerald-300 bg-emerald-950/80 backdrop-blur-md px-3.5 py-1 rounded-full border border-emerald-500/30 shadow-xs">
+                        {getDynamicGreeting()}
+                      </span>
+                      
+                      <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/15 text-[11px] font-bold text-amber-300 shadow-xs">
                         <span className="text-emerald-300 font-bold whitespace-nowrap">🌙 {getHijriDate()}</span>
                         <span className="text-white/30">•</span>
                         <span className="text-sky-200 font-bold whitespace-nowrap">📅 {getGregorianDate()}</span>
                       </div>
                     </div>
 
-                    {/* Bottom Content Area: Title & Dedication */}
-                    <div className="relative z-10 space-y-2 text-white mt-4 sm:mt-auto">
-                      <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black font-kufi text-amber-300 drop-shadow-sm leading-tight">
-                        {settings.appName || (isEn ? "Noor Al-Islam" : "نور الإسلام")}
+                    {/* Center: Glowing Circular App Logo */}
+                    <div className="relative z-10 my-1">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-3 border-amber-400/80 shadow-2xl shadow-amber-500/20 p-1 bg-gradient-to-br from-emerald-700 via-teal-900 to-slate-950 ring-4 ring-emerald-500/20">
+                        <img 
+                          src={settings.appLogoUrl || defaultLogo} 
+                          alt="Logo" 
+                          className="w-full h-full object-cover rounded-full"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Bottom: Welcome Title & Spiritual Message */}
+                    <div className="relative z-10 space-y-1.5 max-w-lg">
+                      <h2 className="text-xl sm:text-2xl font-black font-kufi text-amber-300 drop-shadow-sm leading-tight">
+                        {isEn ? "Welcome to Noor Al-Islam" : "أهلاً وسهلاً بك، في تطبيق نور الإسلام"}
                       </h2>
                       
-                      <p className="text-xs sm:text-sm text-slate-200/90 max-w-xl font-medium leading-relaxed font-sans">
-                        {settings.dedicationText || (isEn ? "Continuous charity for spiritual serenity and daily remembrance." : "صدقة جارية بإذن الله ليكون رفيقك الروحي السلس، معطرًا بذكر رب العالمين وبأسهل واجهة عصرية متكاملة.")}
+                      <p className="text-xs sm:text-sm text-emerald-100/80 font-medium leading-relaxed font-sans">
+                        {isEn 
+                          ? "Welcome to your daily spiritual sanctuary. Enjoy prayer times, Quran recitation, adhkar, and smart Islamic assistant." 
+                          : "مرحباً بك مجدداً في مساحتك الروحانية اليومية. استمتع بمواقيت الصلاة، تلاوة القرآن الكريم، والأذكار، والمستشار الذكي."}
                       </p>
                     </div>
                   </div>
@@ -1111,7 +1180,7 @@ export default function App() {
                       <button
                         key={sec.id}
                         id={`section-card-${sec.id}`}
-                        onClick={() => setActiveSection(sec.id)}
+                        onClick={() => handleNavigateToSection(sec.id)}
                         className={`w-full ${isEn ? 'text-left' : 'text-right'} p-4.5 bg-white dark:bg-[#0B1516] border border-[#EBE7DF] dark:border-[#132326] hover:border-emerald-500/40 dark:hover:border-amber-400/40 rounded-2xl sm:rounded-3xl transition-all duration-300 cursor-pointer shadow-xs hover:shadow-lg hover:scale-[1.015] active:scale-[0.99] flex items-center justify-between gap-4 group relative overflow-hidden`}
                       >
                         <div className={`absolute top-0 ${isEn ? 'left-0' : 'right-0'} w-1.5 h-full bg-gradient-to-b from-transparent via-amber-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
@@ -1158,32 +1227,53 @@ export default function App() {
                 <div className="space-y-6 sm:space-y-8 lg:sticky lg:top-28">
                   
                   {/* Digital Prayer Countdown Widget */}
-                  <div className="bg-gradient-to-br from-[#122421] to-[#0A1617] text-white border-2 border-emerald-500/20 rounded-3xl sm:rounded-[2.5rem] p-6 shadow-md relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none opacity-80" />
-                    <div className="absolute top-0 left-0 w-24 h-24 bg-emerald-500/10 blur-2xl pointer-events-none"></div>
+                  <div className="bg-gradient-to-br from-[#122421] to-[#0A1617] text-white border-2 border-emerald-500/30 rounded-3xl sm:rounded-[2.5rem] p-6 shadow-xl relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none opacity-80" />
+                    <div className="absolute top-0 left-0 w-28 h-28 bg-emerald-500/15 blur-2xl pointer-events-none"></div>
 
                     {/* Countdown header */}
                     <div className="flex items-center justify-between pb-3.5 border-b border-white/10 mb-4">
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
-                        <span className="text-xs font-black text-emerald-200">{isEn ? "Next Prayer Countdown" : "العد التنازلي للصلاة القادمة"}</span>
+                        <span className="text-xs font-black text-emerald-200">{isEn ? "Live Prayer Countdown" : "العد التنازلي الحي للصلاة القادمة"}</span>
                       </div>
-                      <span className="text-[10px] bg-white/10 px-2.5 py-0.5 rounded-lg border border-white/5 font-bold">{settings.city}</span>
+                      <span className="text-[10px] bg-white/10 px-2.5 py-0.5 rounded-lg border border-white/10 font-bold text-amber-300">{settings.city}</span>
                     </div>
 
-                    {/* Big Digital Countdown numbers */}
-                    <div className="text-center py-2 space-y-1.5">
+                    {/* Big Digital Countdown numbers with live seconds */}
+                    <div className="text-center py-2 space-y-2">
                       <span className="text-[11px] text-slate-300 font-bold block">{isEn ? "Next Prayer Insha'Allah:" : "الصلاة القادمة بإذن اللّٰه:"}</span>
-                      <h4 className="text-2xl font-black text-amber-300 font-kufi">
+                      <h4 className="text-2xl sm:text-3xl font-black text-amber-300 font-kufi">
                         {isEn ? `${nextPrayer.arabic} Prayer` : `صلاة ${nextPrayer.arabic}`}
                       </h4>
-                      <div className="text-3xl sm:text-4xl font-mono font-black text-white glow-gold py-1">
-                        {String(remHours).padStart(2, '0')}:{String(remMins).padStart(2, '0')}
+                      
+                      {/* Live Ticking Time HH:MM:SS */}
+                      <div className="text-3xl sm:text-4xl font-mono font-black text-white glow-gold py-1.5 tracking-wider bg-black/30 rounded-2xl border border-white/5 mx-2">
+                        <span>{String(remHours).padStart(2, '0')}</span>
+                        <span className="text-amber-400 mx-0.5 animate-pulse">:</span>
+                        <span>{String(remMins).padStart(2, '0')}</span>
+                        <span className="text-amber-400 mx-0.5 animate-pulse">:</span>
+                        <span className="text-amber-300 font-mono">{String(remSecs).padStart(2, '0')}</span>
                       </div>
-                      <span className="text-[11px] text-emerald-200/80 block">
+
+                      {/* Animated Progress Bar */}
+                      <div className="pt-2 px-2 space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px] text-emerald-200/90 font-bold">
+                          <span>{isEn ? "Progress to Adhan" : "التقدم نحو الأذان"}</span>
+                          <span className="font-mono text-amber-300">{progressPercent}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden p-0.5 border border-white/5">
+                          <div 
+                            className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-orange-400 rounded-full transition-all duration-1000 ease-linear shadow-xs"
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <span className="text-[11px] text-emerald-200/80 block pt-1">
                         {isEn 
-                          ? `${remHours}h ${remMins}m remaining (Adhan ${formatTime12(nextPrayer.time, isEn)})`
-                          : `متبقي ${remHours} ساعة و ${remMins} دقيقة (الأذان ${formatTime12(nextPrayer.time, isEn)})`}
+                          ? `${remHours}h ${remMins}m ${remSecs}s remaining (Adhan ${formatTime12(nextPrayer.time, isEn)})`
+                          : `متبقي ${remHours} ساعة و ${remMins} دقيقة و ${remSecs} ثانية (الأذان ${formatTime12(nextPrayer.time, isEn)})`}
                       </span>
                     </div>
 
@@ -1202,6 +1292,9 @@ export default function App() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Makkah Live Quran Radio Player */}
+                  <MakkahLiveRadioPlayer isEn={isEn} />
 
                   {/* Daily Worship Tracker Checklist ("مسار الطاعات اليومي") */}
                   <div className="bg-white dark:bg-[#0B1516] border border-[#EBE7DF] dark:border-[#132326] rounded-3xl sm:rounded-[2.5rem] p-6 shadow-xs hover:shadow-sm transition-all">
@@ -1258,63 +1351,96 @@ export default function App() {
 
               </div>
 
-              {/* Single Unified Last Section: منصة إحسان الإسلامية */}
-              <EhsanIslamicPlatformSection settings={settings} isEn={isEn} />
-
             </motion.div>
           ) : (
             <motion.div
-              key={`active-sec-${activeSection}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
-              className="space-y-8"
+              key="active-section-wrapper"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
             >
-              {/* Floating Back Header bar */}
-              <div className="flex items-center justify-between gap-3 bg-white/95 dark:bg-[#0B1516]/95 backdrop-blur-md border border-[#EBE7DF] dark:border-[#132326] p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-xs sticky top-[75px] sm:top-[85px] z-30 mb-6 sm:mb-8">
-                {/* Right Side: Section Avatar & Title */}
-                <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                  <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl overflow-hidden border border-emerald-500/30 dark:border-emerald-500/20 shadow-md shrink-0 bg-emerald-950">
-                    {sections.find(s => s.id === activeSection)?.avatarUrl ? (
-                      <img 
-                        src={sections.find(s => s.id === activeSection)?.avatarUrl} 
-                        alt={sections.find(s => s.id === activeSection)?.title} 
-                        className="w-full h-full object-cover" 
-                        referrerPolicy="no-referrer" 
-                      />
-                    ) : (
-                      <div className={`w-full h-full p-2.5 bg-gradient-to-tr ${sections.find(s => s.id === activeSection)?.colorClass} text-white flex items-center justify-center`}>
-                        {sections.find(s => s.id === activeSection)?.icon}
-                      </div>
-                    )}
-                  </div>
-                  <div className={`flex flex-col min-w-0 ${isEn ? 'text-left' : 'text-right'}`}>
-                    <h2 className="text-sm sm:text-base font-black text-emerald-950 dark:text-emerald-300 font-kufi truncate">
+              {/* Floating Back & Quick-Navigation Strip - Pixel Perfect Dark Luxury Theme */}
+              <div className="bg-[#0B1516] border border-[#142326] p-3.5 sm:p-4 rounded-3xl shadow-2xl sticky top-[72px] sm:top-[80px] z-30 mb-6 space-y-3.5">
+                
+                {/* Top Row: Current Section Title and Return Home button */}
+                <div className="flex items-center justify-between gap-3">
+                  
+                  {/* Left Side (in RTL): Back to Home button with Arrow */}
+                  <button
+                    id="section-back-to-home"
+                    onClick={() => handleNavigateToSection(null)}
+                    className="flex items-center gap-2 px-4 py-2 sm:py-2.5 bg-[#060B0C] hover:bg-[#122427] text-slate-100 border border-[#1A2D31] font-bold text-xs sm:text-sm rounded-2xl transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+                    title={isEn ? "Return to main menu" : "العودة للقائمة الرئيسية"}
+                  >
+                    <span>{isEn ? "Home" : "الرئيسية"}</span>
+                    <ArrowRight className={`w-4 h-4 text-slate-300 ${isEn ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Right Side (in RTL): Section Title and Green Icon */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <h2 className="text-base sm:text-xl font-black text-emerald-400 font-kufi truncate tracking-tight">
                       {sections.find(s => s.id === activeSection)?.title}
                     </h2>
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold hidden sm:block truncate">
-                      {sections.find(s => s.id === activeSection)?.desc}
-                    </p>
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center p-2.5 shadow-md shadow-emerald-950/40 shrink-0 border border-emerald-400/20 overflow-hidden">
+                      {sections.find(s => s.id === activeSection)?.icon || <BookOpen className="w-5 h-5 text-white" />}
+                    </div>
                   </div>
+
                 </div>
 
-                {/* Left Side: Back Button */}
-                <button
-                  id="section-back-to-home"
-                  onClick={() => setActiveSection(null)}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-[#FAF8F5] hover:bg-emerald-700 text-slate-700 hover:text-white dark:bg-[#060B0C] dark:text-slate-300 dark:hover:bg-emerald-700 dark:hover:text-white border border-[#E9E1D2]/60 dark:border-[#1E3336]/60 font-black text-xs rounded-xl sm:rounded-2xl transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
-                >
-                  <ArrowRight className={`w-4 h-4 ${isEn ? 'rotate-180' : ''}`} />
-                  <span className="hidden sm:inline">{isEn ? "Back to Home" : "العودة للرئيسية"}</span>
-                  <span className="sm:hidden">{isEn ? "Home" : "الرئيسية"}</span>
-                </button>
+                {/* Bottom Row: Horizontal Quick-Switch Scrollable Strip of All Sections */}
+                <div className="flex items-center gap-2.5 overflow-x-auto pb-1 pt-0.5 scrollbar-none text-xs sm:text-sm">
+                  
+                  {/* Home tab pill */}
+                  <button
+                    id="quick-tab-home"
+                    onClick={() => handleNavigateToSection(null)}
+                    className="px-4 py-2 rounded-full font-kufi font-bold bg-[#060B0C] hover:bg-[#122427] text-slate-300 hover:text-white border border-[#1A2D31] transition-all shrink-0 cursor-pointer flex items-center gap-2 active:scale-95 text-xs sm:text-sm"
+                  >
+                    <span>{isEn ? "Home" : "الرئيسية"}</span>
+                    <span className="text-sm">🏠</span>
+                  </button>
+
+                  {/* All 11 Sections tab pills */}
+                  {sections.map((s) => {
+                    const isActive = s.id === activeSection;
+                    return (
+                      <button
+                        key={s.id}
+                        id={`quick-tab-${s.id}`}
+                        onClick={() => handleNavigateToSection(s.id)}
+                        className={`px-4 sm:px-5 py-2 rounded-full font-kufi transition-all shrink-0 cursor-pointer flex items-center gap-2 active:scale-95 text-xs sm:text-sm ${
+                          isActive
+                            ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-black shadow-lg shadow-emerald-950/60 border-0'
+                            : 'bg-[#060B0C] hover:bg-[#122427] text-slate-300 hover:text-emerald-300 border border-[#1A2D31] font-bold'
+                        }`}
+                      >
+                        <span className="whitespace-nowrap">{s.title}</span>
+                        <span className={isActive ? 'text-white' : 'text-emerald-400'}>
+                          {s.icon}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
               </div>
 
-              {/* Active Component Render */}
-              <div className="w-full">
-                {currentActiveComponent}
-              </div>
+              {/* Active Component Render with fast, smooth transition */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`content-${activeSection}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.18 }}
+                  className="w-full"
+                >
+                  {currentActiveComponent}
+                </motion.div>
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1358,6 +1484,14 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
+      />
+
+      {/* Universal Search & Favorites Modal */}
+      <UnifiedSearchFavoritesModal
+        isOpen={isSearchFavModalOpen}
+        onClose={() => setIsSearchFavModalOpen(false)}
+        onNavigateSection={handleNavigateToSection}
+        isEn={isEn}
       />
 
       {/* Visual Adhan Alert Modal popup */}

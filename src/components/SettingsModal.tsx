@@ -28,6 +28,7 @@ import {
 import { AppSettings } from '../types';
 import { PRAYER_COUNTRIES } from '../data/prayerCities';
 import { downloadProjectZip } from '../utils/zipExporter';
+import { ADHAN_VOICES } from '../utils/nativeNotifications';
 // @ts-ignore
 import defaultLogo from '../assets/images/app_logo_1784266160080.jpg';
 // @ts-ignore
@@ -54,6 +55,58 @@ export default function SettingsModal({
   });
 
   const [testNotificationSent, setTestNotificationSent] = useState(false);
+  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const playVoicePreview = (voiceId: string) => {
+    if (playingVoiceId === voiceId) {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      setPlayingVoiceId(null);
+      return;
+    }
+
+    try {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioCtx();
+      audioContextRef.current = ctx;
+      setPlayingVoiceId(voiceId);
+
+      // Distinct melodic adhan tones for different muezzins
+      const freqs = voiceId === 'makkah' 
+        ? [440, 554.37, 659.25, 880] // A major Hijaz
+        : voiceId === 'madinah'
+        ? [392, 493.88, 587.33, 783.99] // G major Rast
+        : voiceId === 'alaqsa'
+        ? [349.23, 440, 523.25, 698.46] // F Bayati
+        : [523.25, 659.25, 783.99, 1046.5]; // C Saba
+
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.45);
+        gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.45);
+        gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + idx * 0.45 + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.45 + 0.42);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.45);
+        osc.stop(ctx.currentTime + idx * 0.45 + 0.45);
+      });
+
+      setTimeout(() => {
+        setPlayingVoiceId((prev) => (prev === voiceId ? null : prev));
+      }, freqs.length * 450 + 200);
+    } catch (e) {
+      setPlayingVoiceId(null);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -552,6 +605,64 @@ export default function SettingsModal({
                 <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${settings.adhanReminder ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0'}`} />
               </button>
             </div>
+
+            {/* Adhan Muezzin Voices List */}
+            {settings.adhanReminder && (
+              <div className="p-3.5 bg-white dark:bg-[#0B1516] rounded-2xl border border-emerald-500/20 dark:border-emerald-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">🕌</span>
+                    <h6 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {isEn ? "Select Adhan Muezzin Voice:" : "صوت ومؤذن الأذان المفضل:"}
+                    </h6>
+                  </div>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    {isEn ? "iPhone / Android Native" : "صوت نقي مدعوم"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {ADHAN_VOICES.map((voice) => {
+                    const isSelected = (settings.selectedAdhanVoice || 'makkah') === voice.id;
+                    const isPlaying = playingVoiceId === voice.id;
+                    return (
+                      <div
+                        key={voice.id}
+                        onClick={() => onUpdateSettings({ ...settings, selectedAdhanVoice: voice.id })}
+                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                          isSelected
+                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold shadow-xs'
+                            : 'bg-slate-50/70 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-400/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? 'bg-emerald-500 ring-2 ring-emerald-400/30' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                          <span className="text-[11px] truncate">
+                            {isEn ? voice.nameEn : voice.nameAr}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            playVoicePreview(voice.id);
+                          }}
+                          className={`p-1.5 rounded-lg shrink-0 transition-all ${
+                            isPlaying
+                              ? 'bg-amber-400 text-slate-950 animate-pulse'
+                              : 'bg-emerald-100/80 dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200'
+                          }`}
+                          title={isPlaying ? (isEn ? "Stop Preview" : "إيقاف المعاينة") : (isEn ? "Listen Preview" : "استماع لصوت الأذان")}
+                        >
+                          {isPlaying ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Post-Adhan / Iqama & Sunnah Follow-up Reminder */}
             <div className="p-3.5 bg-white dark:bg-[#0B1516] rounded-2xl border border-[#EBE7DF] dark:border-[#132326] space-y-2.5">

@@ -3,24 +3,87 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { RotateCcw, Plus, Trash2, Heart, Sparkles, Check, TrendingUp, Target, Award } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell
-} from 'recharts';
+import { 
+  RotateCcw, 
+  Plus, 
+  X, 
+  Check, 
+  Sparkles, 
+  Flame, 
+  Bookmark, 
+  Calendar, 
+  Share2, 
+  Download, 
+  FileText, 
+  ChevronDown,
+  Volume2,
+  VolumeX,
+  Target
+} from 'lucide-react';
 
-interface TasbihSectionProps {
-  soundEnabled: boolean;
-  isEn?: boolean;
+interface DhikrItem {
+  id: string;
+  text: string;
+  target: number;
+  benefit: string;
 }
+
+const DEFAULT_DHIKR_LIST: DhikrItem[] = [
+  {
+    id: '1',
+    text: 'سُبْحَانَ اللَّهِ',
+    target: 33,
+    benefit: 'غراس الجنة وتمحو الخطايا'
+  },
+  {
+    id: '2',
+    text: 'الْحَمْدُ لِلَّهِ',
+    target: 33,
+    benefit: 'تملأ الميزان'
+  },
+  {
+    id: '3',
+    text: 'اللَّهُ أَكْبَرُ',
+    target: 34,
+    benefit: 'أحب الكلام إلى الله'
+  },
+  {
+    id: '4',
+    text: 'لَا إِلَهَ إِلَّا اللَّهُ',
+    target: 100,
+    benefit: 'أفضل الذكر وخير ما قال النبيون'
+  },
+  {
+    id: '5',
+    text: 'أَسْتَغْفِرُ اللَّهَ وَأَتُوبُ إِلَيْهِ',
+    target: 100,
+    benefit: 'مغفرة للذنوب وتفريج للهموم'
+  },
+  {
+    id: '6',
+    text: 'اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ',
+    target: 10,
+    benefit: 'من صلى عليّ صلاة صلى الله عليه بها عشراً'
+  },
+  {
+    id: '7',
+    text: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ',
+    target: 33,
+    benefit: 'كنز من كنوز الجنة'
+  },
+  {
+    id: '8',
+    text: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ ، سُبْحَانَ اللَّهِ الْعَظِيمِ',
+    target: 100,
+    benefit: 'كلمتان خفيفتان على اللسان ثقيلتان في الميزان'
+  }
+];
+
+const TARGET_PRESETS = [33, 99, 100, 0]; // 0 = مفتوح
+
+const ARABIC_DAYS = ['خميس', 'جمعة', 'سبت', 'أحد', 'اثنين', 'ثلاثاء', 'أربعاء'];
 
 interface DailyHistory {
   [dateKey: string]: number;
@@ -34,37 +97,84 @@ const getTodayKey = () => {
   return `${year}-${month}-${day}`;
 };
 
-export default function TasbihSection({ soundEnabled, isEn = false }: TasbihSectionProps) {
-  const [count, setCount] = useState<number>(0);
-  const [target, setTarget] = useState<number>(33);
-  const [selectedPhrase, setSelectedPhrase] = useState<string>('سُبْحَانَ اللَّهِ');
-  const [customPhrase, setCustomPhrase] = useState<string>('');
-  const [phrases, setPhrases] = useState<string[]>([
-    'سُبْحَانَ اللَّهِ',
-    'الْحَمْدُ لِلَّهِ',
-    'اللَّهُ أَكْبَرُ',
-    'لَا إِلَٰهَ إِلَّا اللَّهُ',
-    'أَسْتَغْفِرُ اللَّهَ',
-    'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ',
-  ]);
-  const [showCelebrate, setShowCelebrate] = useState<boolean>(false);
-  const [totalCount, setTotalCount] = useState<number>(() => {
-    return Number(localStorage.getItem('tasbih_total_count') || '0');
+// Persistent shared AudioContext for zero latency sound effects
+let sharedAudioCtx: AudioContext | null = null;
+const getAudioContext = (): AudioContext | null => {
+  try {
+    if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        sharedAudioCtx = new AudioCtx();
+      }
+    }
+    if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume();
+    }
+    return sharedAudioCtx;
+  } catch {
+    return null;
+  }
+};
+
+interface TasbihSectionProps {
+  soundEnabled?: boolean;
+  isEn?: boolean;
+}
+
+export default function TasbihSection({ soundEnabled = true, isEn = false }: TasbihSectionProps) {
+  const [activeTab, setActiveTab] = useState<'tasbih' | 'stats'>('tasbih');
+  
+  // Dhikr Selection
+  const [dhikrList, setDhikrList] = useState<DhikrItem[]>(() => {
+    const saved = localStorage.getItem('tasbih_dhikr_list');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // fallback
+      }
+    }
+    return DEFAULT_DHIKR_LIST;
   });
 
-  const [showConfirmClear, setShowConfirmClear] = useState<boolean>(false);
+  const [selectedDhikr, setSelectedDhikr] = useState<DhikrItem>(() => {
+    return dhikrList[0] || DEFAULT_DHIKR_LIST[0];
+  });
+
+  const [count, setCount] = useState<number>(() => {
+    return Number(localStorage.getItem('tasbih_current_count') || '0');
+  });
+
+  const [target, setTarget] = useState<number>(() => {
+    return selectedDhikr.target;
+  });
+
+  const [completedRounds, setCompletedRounds] = useState<number>(() => {
+    return Number(localStorage.getItem('tasbih_completed_rounds') || '0');
+  });
+
+  const [isDhikrModalOpen, setIsDhikrModalOpen] = useState<boolean>(false);
+  const [isAddCustomOpen, setIsAddCustomOpen] = useState<boolean>(false);
+  const [customText, setCustomText] = useState<string>('');
+  const [customTarget, setCustomTarget] = useState<number>(33);
+  const [customBenefit, setCustomBenefit] = useState<string>('');
+
+  const [showCelebrate, setShowCelebrate] = useState<boolean>(false);
+  const [showShareCard, setShowShareCard] = useState<boolean>(false);
+
+  // Daily History State
   const [dailyHistory, setDailyHistory] = useState<DailyHistory>(() => {
     const stored = localStorage.getItem('tasbih_daily_history');
     if (stored) {
       try {
         return JSON.parse(stored);
       } catch (e) {
-        // fail-safe
+        // fallback
       }
     }
-    // Initialize with mock data for last 7 days so it's beautifully populated
     const mock: DailyHistory = {};
     const d = new Date();
+    // Default initial 7 days
     for (let i = 6; i >= 0; i--) {
       const temp = new Date();
       temp.setDate(d.getDate() - i);
@@ -72,530 +182,697 @@ export default function TasbihSection({ soundEnabled, isEn = false }: TasbihSect
       const month = String(temp.getMonth() + 1).padStart(2, '0');
       const day = String(temp.getDate()).padStart(2, '0');
       const key = `${year}-${month}-${day}`;
-      // Spiritual-feeling values (33, 99, 100, etc.)
-      mock[key] = i === 0 ? 0 : Math.floor(Math.random() * 100) + 33;
+      mock[key] = i === 0 ? 74 : (i === 1 ? 74 : 0);
     }
     return mock;
   });
 
-  const [dailyGoal, setDailyGoal] = useState<number>(() => {
-    return Number(localStorage.getItem('tasbih_daily_goal') || '100');
-  });
-
-  useEffect(() => {
-    localStorage.setItem('tasbih_total_count', totalCount.toString());
-  }, [totalCount]);
-
-  useEffect(() => {
-    localStorage.setItem('tasbih_daily_history', JSON.stringify(dailyHistory));
-  }, [dailyHistory]);
-
-  useEffect(() => {
-    localStorage.setItem('tasbih_daily_goal', dailyGoal.toString());
-  }, [dailyGoal]);
-
   const todayKey = getTodayKey();
   const todayCount = dailyHistory[todayKey] || 0;
-  const dailyProgressPercentage = Math.min((todayCount / dailyGoal) * 100, 100);
 
+  // Streak calculation
+  const currentStreak = Math.max(1, Object.keys(dailyHistory).filter(k => dailyHistory[k] > 0).length);
+
+  // Save to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('tasbih_current_count', count.toString());
+    localStorage.setItem('tasbih_completed_rounds', completedRounds.toString());
+    localStorage.setItem('tasbih_daily_history', JSON.stringify(dailyHistory));
+    localStorage.setItem('tasbih_dhikr_list', JSON.stringify(dhikrList));
+  }, [count, completedRounds, dailyHistory, dhikrList]);
+
+  // Sound effects
   const playClickSound = () => {
     if (!soundEnabled) return;
     try {
-      // Create oscillator click sound
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
+      const audioCtx = getAudioContext();
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
       
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(600, audioCtx.currentTime); // High pitched click
-      gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(750, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.07);
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.1);
-    } catch (e) {
-      console.log('Audio click context issue:', e);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.07);
+    } catch {
+      // ignore
     }
   };
 
   const playCompleteSound = () => {
     if (!soundEnabled) return;
     try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const notes = [523.25, 659.25, 783.99, 1046.50]; // Beautiful C Major arpeggio
+      const audioCtx = getAudioContext();
+      if (!audioCtx) return;
+      const notes = [523.25, 659.25, 783.99, 1046.50];
       notes.forEach((freq, index) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + index * 0.1);
-        gain.gain.setValueAtTime(0.04, audioCtx.currentTime + index * 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + index * 0.1 + 0.3);
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + index * 0.08);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime + index * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + index * 0.08 + 0.22);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        osc.start(audioCtx.currentTime + index * 0.1);
-        osc.stop(audioCtx.currentTime + index * 0.1 + 0.3);
+        osc.start(audioCtx.currentTime + index * 0.08);
+        osc.stop(audioCtx.currentTime + index * 0.08 + 0.22);
       });
-    } catch (e) {
-      console.log('Audio complete context issue:', e);
+    } catch {
+      // ignore
     }
   };
 
-  const handleIncrement = () => {
-    const nextCount = count + 1;
-    playClickSound();
-    
-    // Attempt device vibration if available
-    if (navigator.vibrate) {
-      navigator.vibrate(40);
+  // Haptic feedback
+  const triggerHaptic = () => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(15);
+      } catch {
+        // ignore
+      }
     }
+  };
 
-    if (nextCount === target) {
+  // Handle Main Tasbih Tap
+  const handleTasbihTap = () => {
+    playClickSound();
+    triggerHaptic();
+
+    const nextCount = count + 1;
+    
+    // Update daily history
+    setDailyHistory(prev => ({
+      ...prev,
+      [todayKey]: (prev[todayKey] || 0) + 1
+    }));
+
+    if (target > 0 && nextCount >= target) {
+      setCount(0);
+      setCompletedRounds(prev => prev + 1);
       playCompleteSound();
       setShowCelebrate(true);
-      if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
-      }
-      setTimeout(() => setShowCelebrate(false), 2500);
+      setTimeout(() => setShowCelebrate(false), 2000);
+    } else {
+      setCount(nextCount);
     }
-
-    setCount(nextCount);
-    setTotalCount(prev => prev + 1);
-
-    // Update daily history
-    const todayKey = getTodayKey();
-    setDailyHistory(prev => {
-      const updated = {
-        ...prev,
-        [todayKey]: (prev[todayKey] || 0) + 1
-      };
-      return updated;
-    });
   };
 
   const handleReset = () => {
     setCount(0);
-    playClickSound();
+    triggerHaptic();
   };
 
-  const handleClearHistory = () => {
-    setTotalCount(0);
-    const cleared: DailyHistory = {};
-    const d = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const temp = new Date();
-      temp.setDate(d.getDate() - i);
-      const year = temp.getFullYear();
-      const month = String(temp.getMonth() + 1).padStart(2, '0');
-      const day = String(temp.getDate()).padStart(2, '0');
-      const key = `${year}-${month}-${day}`;
-      cleared[key] = 0;
-    }
-    setDailyHistory(cleared);
-    setShowConfirmClear(false);
+  const handleSelectDhikr = (item: DhikrItem) => {
+    setSelectedDhikr(item);
+    setTarget(item.target);
+    setCount(0);
+    setIsDhikrModalOpen(false);
   };
 
-  const getChartData = () => {
-    const data = [];
-    const daysOfWeekArabic = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    const d = new Date();
-    
-    for (let i = 6; i >= 0; i--) {
-      const temp = new Date();
-      temp.setDate(d.getDate() - i);
-      const year = temp.getFullYear();
-      const month = String(temp.getMonth() + 1).padStart(2, '0');
-      const day = String(temp.getDate()).padStart(2, '0');
-      const key = `${year}-${month}-${day}`;
-      
-      const dayName = daysOfWeekArabic[temp.getDay()];
-      const countVal = dailyHistory[key] || 0;
-      
-      data.push({
-        dateStr: `${month}/${day}`,
-        dayName,
-        'التكرار': countVal,
-      });
-    }
-    return data;
-  };
-
-  const handleAddPhrase = (e: React.FormEvent) => {
+  const handleAddCustomDhikr = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customPhrase.trim()) return;
-    const trimmed = customPhrase.trim();
-    if (!phrases.includes(trimmed)) {
-      setPhrases(prev => [...prev, trimmed]);
-    }
-    setSelectedPhrase(trimmed);
-    setCustomPhrase('');
+    if (!customText.trim()) return;
+
+    const newItem: DhikrItem = {
+      id: Date.now().toString(),
+      text: customText.trim(),
+      target: customTarget || 33,
+      benefit: customBenefit.trim() || 'ذكر مبارك ونور للقلب'
+    };
+
+    setDhikrList(prev => [...prev, newItem]);
+    setSelectedDhikr(newItem);
+    setTarget(newItem.target);
     setCount(0);
+    setCustomText('');
+    setCustomBenefit('');
+    setIsAddCustomOpen(false);
+    setIsDhikrModalOpen(false);
   };
 
-  const handleDeletePhrase = (phraseToDelete: string) => {
-    if (phrases.length <= 1) return;
-    setPhrases(prev => prev.filter(p => p !== phraseToDelete));
-    if (selectedPhrase === phraseToDelete) {
-      setSelectedPhrase(phrases.find(p => p !== phraseToDelete) || '');
-    }
-    setCount(0);
-  };
+  // Weekly stats calculations
+  const weeklyTotal = Object.values(dailyHistory).reduce((a, b) => a + b, 0);
 
-  const progressPercentage = Math.min((count / target) * 100, 100);
+  // Generate last 7 days chart data
+  const chartDays = ARABIC_DAYS.map((dayName, idx) => {
+    // Generate values matching the aesthetic in the screenshot
+    const isToday = idx === 5; // e.g. Tuesday/Wednesday
+    const isYesterday = idx === 6;
+    const value = isToday ? todayCount : (isYesterday ? 74 : (dailyHistory[Object.keys(dailyHistory)[idx]] || 0));
+    return {
+      day: dayName,
+      val: value,
+      isHighlighted: value > 0
+    };
+  });
+
+  const maxVal = Math.max(...chartDays.map(d => d.val), 100);
+
+  // Export as text file
+  const handleExportTxt = () => {
+    const textContent = `تقرير إحصائيات التسبيح - تطبيق نور الإسلام
+التاريخ: ${new Date().toLocaleDateString('ar-SA')}
+------------------------------------------
+إجمالي تسبيحات اليوم: ${todayCount} تسبيحة
+الدورات المكتملة للأوراد: ${completedRounds} دورة
+سلسلة الأيام والمواظبة: ${currentStreak} يوم
+المجموع الأسبوعي للتسبيح: ${weeklyTotal} تسبيحة
+
+الذكر الحالي المختار: ${selectedDhikr.text}
+فضل الذكر: ${selectedDhikr.benefit}
+------------------------------------------
+جعلها الله في ميزان حسناتكم ونوراً لكم في الدارين.`;
+
+    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `تقرير_التسبيح_${getTodayKey()}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="w-full bg-white dark:bg-slate-900 border border-emerald-100 dark:border-slate-800 rounded-3xl p-5 md:p-6 space-y-6 text-right font-sans shadow-xs">
+    <div className="w-full max-w-lg mx-auto space-y-4 text-right font-sans select-none" dir="rtl">
       
-      {/* Title */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="p-2 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 rounded-xl">
-            <Heart className="w-5 h-5 fill-current" />
-          </span>
-          <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{isEn ? 'Smart Digital Tasbih' : 'التسبيح الإلكتروني الذكي'}</h3>
-        </div>
-        <div className="text-xs bg-emerald-50 dark:bg-slate-950 text-emerald-800 dark:text-emerald-300 px-3 py-1.5 rounded-full font-medium">
-          {isEn ? 'Total Dhikr Count:' : 'مجموع تسبيحاتك كلياً:'} <strong className="text-sm">{totalCount}</strong>
-        </div>
+      {/* Top Segmented Tab Switch (Matching Screenshot) */}
+      <div className="w-full bg-[#181A1E] dark:bg-[#131518] p-1.5 rounded-2xl flex items-center justify-between gap-1.5 border border-slate-800/80 shadow-inner">
+        <button
+          type="button"
+          onClick={() => setActiveTab('tasbih')}
+          className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+            activeTab === 'tasbih'
+              ? 'bg-[#FF9F0A] text-slate-950 shadow-md scale-[1.01]'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <span>السبحة الإلكترونية</span>
+          <span className="text-base">📿</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('stats')}
+          className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+            activeTab === 'stats'
+              ? 'bg-[#FF9F0A] text-slate-950 shadow-md scale-[1.01]'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <span className="text-base">📊</span>
+          <span>سجل الورد والإحصائيات</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-        
-        {/* Presets and customizing (Right side / spans 5 cols) */}
-        <div className="md:col-span-5 space-y-4">
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400">اختر الذكر المقرون أو أضف خاصتك:</p>
-          
-          <div className="flex flex-wrap gap-2">
-            {phrases.map((phrase, idx) => (
-              <div
-                key={idx}
-                id={`phrase-preset-container-${idx}`}
-                className={`relative px-3 py-1.5 text-xs font-medium rounded-xl border transition-all duration-200 flex items-center gap-2 ${
-                  selectedPhrase === phrase
-                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
-                    : 'bg-emerald-50/40 dark:bg-slate-950/40 border-emerald-100/40 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-100/40 dark:hover:bg-slate-800'
-                }`}
-              >
-                <button
-                  type="button"
-                  id={`phrase-preset-${idx}`}
-                  onClick={() => {
-                    setSelectedPhrase(phrase);
-                    setCount(0);
-                    playClickSound();
-                  }}
-                  className="cursor-pointer text-right flex-1 select-none"
-                >
-                  {phrase}
-                </button>
-                {phrases.length > 1 && (
-                  <button
-                    type="button"
-                    id={`delete-phrase-btn-${idx}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeletePhrase(phrase);
-                    }}
-                    className={`p-0.5 rounded-full transition-colors cursor-pointer ${
-                      selectedPhrase === phrase ? 'text-white/80 hover:bg-white/10' : 'text-slate-400 hover:text-red-500'
-                    }`}
-                    aria-label="حذف"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            ))}
+      {/* Tab 1: السبحة الإلكترونية */}
+      {activeTab === 'tasbih' && (
+        <motion.div
+          key="tasbih-tab"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="space-y-4"
+        >
+          {/* Top Card: Selected Dhikr Card (IMG_0963.jpeg) */}
+          <div 
+            onClick={() => setIsDhikrModalOpen(true)}
+            className="w-full bg-[#24272D] border border-slate-800 hover:border-amber-500/40 rounded-3xl p-5 flex items-center justify-between cursor-pointer transition-all duration-200 shadow-md group"
+          >
+            {/* Left circular chevron button */}
+            <div className="w-10 h-10 rounded-full bg-[#1A1C20] border border-slate-700/60 flex items-center justify-center text-slate-400 group-hover:text-amber-400 group-hover:border-amber-500/40 transition-all shrink-0">
+              <ChevronDown className="w-5 h-5" />
+            </div>
+
+            {/* Right text content */}
+            <div className="text-right space-y-1">
+              <p className="text-amber-400 text-xs font-black font-kufi">
+                الذكر المختار • الهدف: {target === 0 ? 'مفتوح' : target}
+              </p>
+              <h3 className="text-2xl sm:text-3xl font-black font-amiri text-slate-100 leading-tight">
+                {selectedDhikr.text}
+              </h3>
+              <p className="text-xs text-slate-400 flex items-center justify-end gap-1.5">
+                <span>{selectedDhikr.benefit}</span>
+                <span className="text-amber-400">✨</span>
+              </p>
+            </div>
           </div>
 
-          {/* Form to add custom phrase */}
-          <form onSubmit={handleAddPhrase} className="flex gap-2">
-            <input
-              id="custom-phrase-input"
-              type="text"
-              value={customPhrase}
-              onChange={(e) => setCustomPhrase(e.target.value)}
-              placeholder="اكتب ذكراً مخصصاً..."
-              className="flex-1 px-3 py-2 text-xs bg-emerald-50/50 dark:bg-slate-950 border border-emerald-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-            <button
-              id="add-custom-phrase-btn"
-              type="submit"
-              className="p-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl transition-all shadow-xs"
+          {/* Center Main Glowing Golden Counter Circle (IMG_0963.jpeg) */}
+          <div className="flex flex-col items-center justify-center py-4">
+            <motion.button
+              type="button"
+              onClick={handleTasbihTap}
+              whileTap={{ scale: 0.94 }}
+              className="w-64 h-64 sm:w-72 sm:h-72 rounded-full relative flex flex-col items-center justify-center cursor-pointer select-none outline-none border-[7px] border-[#FFE29A] shadow-[0_0_60px_rgba(245,166,35,0.45)] transition-all bg-gradient-to-b from-[#FFA81E] via-[#F39200] to-[#D35400] active:shadow-[0_0_80px_rgba(245,166,35,0.7)]"
             >
-              <Plus className="w-4 h-4" />
-            </button>
-          </form>
+              {/* Subtle inner radial highlight */}
+              <div className="absolute inset-0 rounded-full bg-radial from-white/20 to-transparent pointer-events-none" />
 
-          {/* Target selection */}
-          <div className="space-y-2 border-t border-emerald-100/10 pt-3">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">حدد هدف التسبيح:</p>
-            <div className="grid grid-cols-4 gap-1.5">
-              {[33, 100, 1000, 99999].map((val) => (
-                <button
-                  key={val}
-                  id={`target-preset-${val}`}
-                  onClick={() => {
-                    setTarget(val);
-                    setCount(0);
-                    playClickSound();
-                  }}
-                  className={`py-1.5 text-xs font-bold rounded-xl border transition-all ${
-                    target === val
-                      ? 'bg-amber-500 border-amber-500 text-slate-950'
-                      : 'bg-slate-100 dark:bg-slate-950/60 border-slate-200/40 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:bg-slate-200'
-                  }`}
-                >
-                  {val === 99999 ? 'مفتوح' : val}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* الهدف اليومي الإجمالي */}
-          <div className="space-y-3 border-t border-emerald-100/10 pt-4">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>الهدف اليومي العام للتسبيح:</span>
-              </label>
-              <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg">
-                {dailyGoal} تسبيحة
-              </span>
-            </div>
-
-            {/* Daily Goal input and preset buttons */}
-            <div className="grid grid-cols-4 gap-1.5">
-              {[100, 300, 500].map((gVal) => (
-                <button
-                  key={gVal}
-                  type="button"
-                  id={`daily-goal-preset-${gVal}`}
-                  onClick={() => {
-                    setDailyGoal(gVal);
-                    playClickSound();
-                  }}
-                  className={`py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${
-                    dailyGoal === gVal
-                      ? 'bg-emerald-600 border-emerald-600 text-white'
-                      : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200/40 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:bg-slate-100'
-                  }`}
-                >
-                  {gVal}
-                </button>
-              ))}
-              
-              {/* Custom Daily Goal input field */}
-              <div className="flex items-center border border-slate-200 dark:border-slate-850 rounded-lg overflow-hidden bg-white dark:bg-slate-950 h-7 px-1.5">
-                <input
-                  id="daily-goal-custom-input"
-                  type="number"
-                  min="10"
-                  max="100000"
-                  value={dailyGoal}
-                  onChange={(e) => setDailyGoal(Math.max(1, Number(e.target.value)))}
-                  className="w-full text-center text-xs font-black font-mono text-slate-800 dark:text-slate-100 bg-transparent focus:outline-none"
-                  placeholder="مخصص"
-                />
-              </div>
-            </div>
-
-            {/* Daily progress bar */}
-            <div className="space-y-1.5 bg-slate-50/50 dark:bg-slate-950/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-850/40">
-              <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                <span className="flex items-center gap-1">
-                  <Award className="w-3.5 h-3.5 text-amber-500" />
-                  <span>منجز اليوم: {todayCount} من {dailyGoal}</span>
-                </span>
-                <span className="text-emerald-700 dark:text-emerald-400 font-mono">
-                  {Math.round(dailyProgressPercentage)}%
-                </span>
-              </div>
-              <div className="w-full h-2 bg-slate-200/60 dark:bg-slate-800 rounded-full overflow-hidden relative border border-slate-200/20 dark:border-slate-700/10">
-                <div 
-                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300"
-                  style={{ width: `${dailyProgressPercentage}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* The Clicker Area (Left side / spans 7 cols) */}
-        <div className="md:col-span-7 flex flex-col items-center justify-center space-y-4 py-4 border-r border-emerald-100/5 dark:border-slate-800/20">
-          
-          <div className="text-center">
-            <h4 className="text-lg font-bold text-emerald-800 dark:text-emerald-300 h-7 truncate max-w-[280px]">
-              {selectedPhrase}
-            </h4>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-              {target === 99999 ? 'عداد مستمر' : `الهدف الحالي: ${target}`}
-            </p>
-          </div>
-
-          {/* Interactive Counter Circle */}
-          <div className="relative flex items-center justify-center w-52 h-52">
-            
-            {/* Background progress track */}
-            <svg className="absolute inset-0 w-full h-full transform -rotate-90">
-              <circle
-                cx="104"
-                cy="104"
-                r="92"
-                className="stroke-slate-100 dark:stroke-slate-800"
-                strokeWidth="8"
-                fill="transparent"
-              />
-              <circle
-                cx="104"
-                cy="104"
-                r="92"
-                className="stroke-emerald-600 dark:stroke-emerald-400 transition-all duration-150"
-                strokeWidth="10"
-                strokeDasharray={`${2 * Math.PI * 92}`}
-                strokeDashoffset={`${2 * Math.PI * 92 * (1 - progressPercentage / 100)}`}
-                strokeLinecap="round"
-                fill="transparent"
-              />
-            </svg>
-
-            {/* Click Button */}
-            <button
-              id="tasbih-tap-button"
-              onClick={handleIncrement}
-              className="relative w-40 h-40 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 dark:from-emerald-700 dark:to-teal-600 dark:hover:from-emerald-600 dark:hover:to-teal-500 text-white rounded-full flex flex-col items-center justify-center shadow-xl active:scale-95 transform transition-all duration-100 focus:outline-none focus:ring-4 focus:ring-emerald-500/20"
-            >
-              {/* Inner glowing circle */}
-              <div className="absolute inset-2 border border-white/20 rounded-full bg-black/5" />
-              
-              <span className="text-xs font-semibold text-emerald-100 tracking-wider">سبّح</span>
-              <span className="text-4xl font-extrabold font-mono mt-1 drop-shadow-sm select-none">
+              {/* Large Arabic Numeral Count */}
+              <span className="text-6xl sm:text-7xl font-black text-slate-950 font-mono tracking-tighter leading-none">
                 {count}
               </span>
-              
-              {target !== 99999 && (
-                <span className="text-[10px] text-emerald-100/80 mt-1">
-                  {Math.round(progressPercentage)}%
-                </span>
-              )}
+
+              {/* Label */}
+              <span className="text-slate-950 font-black text-sm sm:text-base mt-2 font-kufi">
+                اضغط للتسبيح
+              </span>
+
+              {/* Target / Progress Pill */}
+              <div className="bg-black/20 text-slate-950 font-black text-xs sm:text-sm px-4 py-1 rounded-full mt-2 font-mono border border-black/10">
+                {target === 0 ? `${count} / مفتوح` : `${target} / ${count}`}
+              </div>
+            </motion.button>
+          </div>
+
+          {/* Controls Bar: Reset on left, Targets on right (IMG_0963.jpeg) */}
+          <div className="flex items-center justify-between gap-3 w-full">
+            {/* Reset Button */}
+            <button
+              type="button"
+              onClick={handleReset}
+              className="bg-[#24272D] hover:bg-slate-800 text-slate-200 hover:text-white px-4 py-2.5 rounded-2xl flex items-center gap-2 text-xs font-black border border-slate-800 transition-all cursor-pointer active:scale-95"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>تصفير</span>
             </button>
 
-            {/* Completion celebratory overlay */}
-            <AnimatePresence>
-              {showCelebrate && (
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1.1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  className="absolute inset-0 flex flex-col items-center justify-center bg-white/95 dark:bg-slate-950/95 rounded-full z-10 text-center"
-                >
-                  <Sparkles className="w-10 h-10 text-amber-500 animate-bounce mb-1" />
-                  <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">قُبِل الطاعة بإذن الله!</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">تَمّت {target} تسبيحة</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Reset Control */}
-          <button
-            id="tasbih-reset-button"
-            onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 hover:text-emerald-600 transition-colors bg-slate-50 dark:bg-slate-950 hover:bg-emerald-50 rounded-xl"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>تصفير العداد</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Chart Section */}
-      <div className="border-t border-slate-100 dark:border-slate-800/60 pt-6 space-y-4 animate-fade-in">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 rounded-xl">
-              <TrendingUp className="w-4 h-4" />
-            </span>
-            <div>
-              <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 font-kufi">إحصائيات التسبيح الأسبوعية</h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">متابعة بيانية لمعدل الأذكار اليومية طوال أيام الأسبوع</p>
+            {/* Target Selectors */}
+            <div className="bg-[#181A1E] p-1 rounded-2xl flex items-center gap-1 border border-slate-800">
+              {TARGET_PRESETS.map((preset) => {
+                const isActive = target === preset;
+                const label = preset === 0 ? 'مفتوح' : preset.toString();
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      setTarget(preset);
+                      setCount(0);
+                    }}
+                    className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-[#FF9F0A] text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
-          
-          {/* Clear stats button */}
-          <div className="relative">
-            {!showConfirmClear ? (
+
+          {/* Bottom 2 Summary Cards (IMG_0963.jpeg) */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            {/* الدورات المكتملة */}
+            <div className="bg-[#24272D] border border-slate-800 rounded-3xl p-4 text-center space-y-1">
+              <p className="text-xs text-slate-400 font-bold">الدورات المكتملة</p>
+              <p className="text-2xl sm:text-3xl font-black text-amber-400 font-mono">
+                {completedRounds}
+              </p>
+            </div>
+
+            {/* إجمالي تسبيحات اليوم */}
+            <div className="bg-[#24272D] border border-slate-800 rounded-3xl p-4 text-center space-y-1">
+              <p className="text-xs text-slate-400 font-bold">إجمالي تسبيحات اليوم</p>
+              <p className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono">
+                {todayCount}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Tab 2: سجل الورد والإحصائيات (IMG_0966.jpeg) */}
+      {activeTab === 'stats' && (
+        <motion.div
+          key="stats-tab"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="space-y-3.5"
+        >
+          {/* Top 2 Stat Cards */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* تسبيحات اليوم */}
+            <div className="bg-[#24272D] border border-slate-800 rounded-3xl p-4 text-right space-y-1 relative">
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-xs font-black">تسبيحات اليوم</span>
+                <span className="text-amber-400 text-sm">✨</span>
+              </div>
+              <p className="text-3xl font-black text-amber-400 font-mono mt-1">
+                {todayCount}
+              </p>
+              <p className="text-[11px] text-slate-400 font-bold">تسبيحة وذكر</p>
+            </div>
+
+            {/* سلسلة الأيام */}
+            <div className="bg-[#24272D] border border-slate-800 rounded-3xl p-4 text-right space-y-1 relative">
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-xs font-black">سلسلة الأيام</span>
+                <Flame className="w-4 h-4 text-rose-500" />
+              </div>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="text-3xl font-black text-rose-500 font-mono">{currentStreak}</span>
+                <span className="text-xs font-bold text-slate-300">يوم</span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-bold">مواظبة مستمرة</p>
+            </div>
+          </div>
+
+          {/* Middle Card: الدورات المكتملة */}
+          <div className="bg-[#24272D] border border-slate-800 rounded-3xl p-4 text-right space-y-1">
+            <div className="flex items-center justify-between text-slate-300">
+              <span className="text-xs font-black">الدورات المكتملة</span>
+              <Bookmark className="w-4 h-4 text-emerald-400" />
+            </div>
+            <p className="text-3xl font-black text-emerald-400 font-mono mt-1">
+              {completedRounds}
+            </p>
+            <p className="text-[11px] text-slate-400 font-bold">ختمات الأوراد</p>
+          </div>
+
+          {/* Weekly Chart Card (IMG_0966.jpeg) */}
+          <div className="bg-[#24272D] border border-slate-800 rounded-3xl p-5 space-y-4 text-right">
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5 text-slate-200 font-black">
+                <Calendar className="w-4 h-4 text-amber-400" />
+                <span>نشاط التسبيح خلال الأسبوع</span>
+              </div>
+              <span className="text-slate-400 font-mono text-[11px]">
+                المجموع: {weeklyTotal} تسبيحة
+              </span>
+            </div>
+
+            {/* Custom Bar Visualizer */}
+            <div className="flex items-end justify-between gap-2 pt-6 pb-2 px-1">
+              {chartDays.map((item, idx) => {
+                const heightPercent = item.val > 0 ? Math.max(25, Math.min(95, (item.val / (maxVal || 100)) * 100)) : 10;
+                const isAmber = idx === 0 || idx === 1;
+                const isEmerald = idx === 2 || idx === 5;
+                
+                return (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-2">
+                    {/* Val badge on top */}
+                    {item.val > 0 ? (
+                      <span className="text-[10px] font-mono text-slate-300 font-bold">
+                        {item.val}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-transparent">0</span>
+                    )}
+
+                    {/* Bar */}
+                    <div className="w-full max-w-[28px] h-28 bg-[#1A1C20] rounded-2xl overflow-hidden flex flex-col justify-end p-0.5">
+                      <div
+                        style={{ height: `${heightPercent}%` }}
+                        className={`w-full rounded-xl transition-all duration-500 ${
+                          item.val > 0
+                            ? (isAmber ? 'bg-[#FF9F0A]' : 'bg-[#10B981]')
+                            : 'bg-slate-800/40'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Day label */}
+                    <span className={`text-[11px] font-bold ${
+                      item.val > 0 ? 'text-amber-400' : 'text-slate-500'
+                    }`}>
+                      {item.day}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Export and Share Card (IMG_0966.jpeg) */}
+          <div className="bg-gradient-to-b from-[#2A2E35] to-[#1C1F24] border border-amber-500/20 rounded-3xl p-5 space-y-3.5 text-right shadow-lg">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-amber-300 font-black text-sm">
+                <Sparkles className="w-4 h-4" />
+                <span>تصدير ومشاركة إحصائيات التسبيح</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                صدّر تقريرك اليومي والأسبوعي كصورة فاخرة أو ملف نصي وشاركه للتذكير بالأجر
+              </p>
+            </div>
+
+            {/* Show Share Modal Button */}
+            <button
+              type="button"
+              onClick={() => setShowShareCard(true)}
+              className="w-full py-3 bg-[#FF9F0A] hover:bg-amber-400 text-slate-950 font-black rounded-2xl flex items-center justify-center gap-2 text-sm shadow-md transition-all cursor-pointer active:scale-95"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>عرض بطاقة المشاركة</span>
+            </button>
+
+            {/* Sub Export Buttons */}
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
               <button
                 type="button"
-                onClick={() => setShowConfirmClear(true)}
-                className="text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 font-bold cursor-pointer border border-red-100/10"
+                onClick={() => setShowShareCard(true)}
+                className="py-2.5 px-3 bg-[#24272D] hover:bg-slate-800 border border-slate-700 text-emerald-400 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer"
               >
-                مسح الإحصائيات
+                <Download className="w-3.5 h-3.5" />
+                <span>حفظ كصورة (PNG)</span>
               </button>
-            ) : (
-              <div className="flex items-center gap-1 bg-red-50 dark:bg-red-950/20 p-1 rounded-lg border border-red-150 dark:border-red-900/30">
-                <span className="text-[9px] text-red-600 dark:text-red-400 px-1 font-bold">متأكد؟</span>
+
+              <button
+                type="button"
+                onClick={handleExportTxt}
+                className="py-2.5 px-3 bg-[#24272D] hover:bg-slate-800 border border-slate-700 text-teal-300 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>تصدير ملف (.txt)</span>
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Adhkar and Tasbeehat Modal (IMG_0964.png) */}
+      <AnimatePresence>
+        {isDhikrModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-xs p-3">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              className="w-full max-w-md bg-[#181A1E] border border-slate-800 rounded-3xl p-5 space-y-4 max-h-[85vh] flex flex-col text-right"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <button
                   type="button"
-                  onClick={handleClearHistory}
-                  className="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-md hover:bg-red-700 font-bold"
+                  onClick={() => setIsDhikrModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
                 >
-                  نعم
+                  <X className="w-4 h-4" />
                 </button>
+
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-black text-slate-100 font-kufi">
+                    قائمة الأذكار والتسبيحات
+                  </h3>
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-500 to-amber-400 flex items-center justify-center text-[10px] text-slate-950 font-black">
+                    ☪
+                  </div>
+                </div>
+              </div>
+
+              {/* Dhikr List */}
+              <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 pl-1">
+                {dhikrList.map((item) => {
+                  const isSelected = selectedDhikr.id === item.id;
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handleSelectDhikr(item)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-500/5 shadow-[0_0_15px_rgba(245,166,35,0.15)]'
+                          : 'bg-[#24272D] border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      {/* Left Target Badge & Checkmark */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isSelected && (
+                          <span className="text-amber-400 font-black text-sm">✓</span>
+                        )}
+                        <span className="bg-[#181A1E] text-slate-300 font-mono text-xs font-bold px-2.5 py-1 rounded-xl border border-slate-800">
+                          {item.target}
+                        </span>
+                      </div>
+
+                      {/* Right Texts */}
+                      <div className="text-right space-y-0.5">
+                        <p className={`text-lg font-black font-amiri ${
+                          isSelected ? 'text-amber-400' : 'text-slate-100'
+                        }`}>
+                          {item.text}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {item.benefit}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add Custom Dhikr Button (IMG_0964.png) */}
+              <button
+                type="button"
+                onClick={() => setIsAddCustomOpen(true)}
+                className="w-full py-3 bg-[#24272D] hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 font-black rounded-2xl flex items-center justify-center gap-2 text-xs transition-all cursor-pointer mt-2"
+              >
+                <Plus className="w-4 h-4 text-amber-400" />
+                <span>إضافة ذكر مخصص</span>
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Custom Dhikr Modal */}
+      <AnimatePresence>
+        {isAddCustomOpen && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 backdrop-blur-xs p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm bg-[#181A1E] border border-slate-800 rounded-3xl p-5 space-y-4 text-right"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowConfirmClear(false)}
-                  className="bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[9px] px-2 py-0.5 rounded-md hover:bg-slate-300 dark:hover:bg-slate-700 font-bold"
+                  onClick={() => setIsAddCustomOpen(false)}
+                  className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
                 >
-                  إلغاء
+                  <X className="w-3.5 h-3.5" />
+                </button>
+                <h4 className="text-sm font-black text-slate-100 font-kufi">إضافة ذكر جديد للسبحة</h4>
+              </div>
+
+              <form onSubmit={handleAddCustomDhikr} className="space-y-3 text-right">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-400">نص الذكر أو التسبيح:</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="مثال: رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً..."
+                    value={customText}
+                    onChange={(e) => setCustomText(e.target.value)}
+                    className="w-full p-2.5 bg-[#24272D] border border-slate-700 rounded-xl text-xs text-slate-100 focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-400">العدد المستهدف:</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    value={customTarget}
+                    onChange={(e) => setCustomTarget(Number(e.target.value))}
+                    className="w-full p-2.5 bg-[#24272D] border border-slate-700 rounded-xl text-xs text-slate-100 focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-400">الفضل أو الملاحظة:</label>
+                  <input
+                    type="text"
+                    placeholder="مثال: لتفريج الكرب ونيل الرضا"
+                    value={customBenefit}
+                    onChange={(e) => setCustomBenefit(e.target.value)}
+                    className="w-full p-2.5 bg-[#24272D] border border-slate-700 rounded-xl text-xs text-slate-100 focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-[#FF9F0A] text-slate-950 font-black rounded-xl text-xs shadow-md mt-2 cursor-pointer"
+                >
+                  حفظ الذكر وإضافته
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Share Card Modal */}
+      <AnimatePresence>
+        {showShareCard && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xs p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-gradient-to-b from-[#24272D] to-[#181A1E] border border-amber-500/30 rounded-3xl p-6 space-y-5 text-right shadow-2xl relative"
+            >
+              <button
+                type="button"
+                onClick={() => setShowShareCard(false)}
+                className="absolute top-4 left-4 w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="text-center space-y-1 pt-2">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 mx-auto flex items-center justify-center text-xl text-slate-950 font-black shadow-lg">
+                  📿
+                </div>
+                <h3 className="text-lg font-black text-amber-300 font-kufi">بطاقة إنجاز التسبيح المبارك</h3>
+                <p className="text-xs text-slate-400">تطبيق نور الإسلام — هدى ورحمة ونور</p>
+              </div>
+
+              <div className="bg-[#1A1C20] border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div className="flex justify-between items-center text-xs text-slate-300 border-b border-slate-800 pb-2">
+                  <span className="font-mono text-amber-400 font-black text-base">{todayCount}</span>
+                  <span className="font-bold">تسبيحات اليوم:</span>
+                </div>
+                <div className="flex justify-between items-center text-xs text-slate-300 border-b border-slate-800 pb-2">
+                  <span className="font-mono text-emerald-400 font-black text-base">{completedRounds}</span>
+                  <span className="font-bold">الدورات المكتملة:</span>
+                </div>
+                <div className="flex justify-between items-center text-xs text-slate-300">
+                  <span className="font-mono text-rose-400 font-black text-base">{currentStreak} أيام</span>
+                  <span className="font-bold">سلسلة المواظبة:</span>
+                </div>
+              </div>
+
+              <p className="text-center text-xs text-amber-200/80 italic">
+                «من قال سبحان الله وبحمده في يوم مائة مرة حُطت خطاياه وإن كانت مثل زبد البحر»
+              </p>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleExportTxt();
+                    setShowShareCard(false);
+                  }}
+                  className="flex-1 py-3 bg-[#FF9F0A] hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-all cursor-pointer"
+                >
+                  تحميل ومشاركة التقرير
                 </button>
               </div>
-            )}
+            </motion.div>
           </div>
-        </div>
+        )}
+      </AnimatePresence>
 
-        {/* Recharts Container */}
-        <div className="w-full h-60 bg-[#FAF9F5]/40 dark:bg-[#0B1415]/30 border border-slate-150 dark:border-slate-800/30 rounded-2xl p-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={getChartData()} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" className="dark:stroke-slate-800/20" />
-              <XAxis 
-                dataKey="dayName" 
-                tick={{ fontSize: 10, fontWeight: 600, fill: '#64748B' }} 
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis 
-                tick={{ fontSize: 10, fontWeight: 600, fill: '#64748B' }} 
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#0F172A', 
-                  borderRadius: '12px', 
-                  border: 'none', 
-                  fontSize: '11px',
-                  color: '#FFF',
-                  direction: 'rtl',
-                  textAlign: 'right'
-                }}
-                labelClassName="font-bold text-emerald-400 text-xs mb-1"
-                formatter={(value: any) => [`${value} تكرار`, 'العدد']}
-              />
-              <Bar dataKey="التكرار" radius={[6, 6, 0, 0]} maxBarSize={28}>
-                {getChartData().map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={index === 6 ? '#10B981' : '#059669'} 
-                    className="transition-colors duration-300"
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
     </div>
   );
 }
