@@ -30,20 +30,18 @@ import {
   Copy,
   Share2,
   Check,
-  CheckCheck
+  CheckCheck,
+  SkipBack,
+  SkipForward,
+  RotateCcw,
+  RotateCw,
+  Repeat
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { quranMetadata } from '../data/quran_metadata';
 import { offlineSurahs } from '../data/quran_text';
+import { QURAN_RECITERS, QuranReciter } from '../data/quran_reciters';
 import { SurahMetadata, SurahDetail, Ayah } from '../types';
-
-const RECITERS = [
-  { id: 'alafasy', name: 'مشاري بن راشد العفاسي', url: 'https://server8.mp3quran.net/afs/' },
-  { id: 'maher', name: 'ماهر المعيقلي', url: 'https://server12.mp3quran.net/maher/' },
-  { id: 'basit_murattal', name: 'عبد الباسط عبد الصمد (مرتل)', url: 'https://server7.mp3quran.net/basit/' },
-  { id: 'ghamdi', name: 'سعد الغامدي', url: 'https://server7.mp3quran.net/s_gmd/' },
-  { id: 'sudais', name: 'عبد الرحمن السديس', url: 'https://server11.mp3quran.net/sds/' }
-];
 
 const FONT_FAMILIES = [
   { id: 'amiri', name: 'خط حفص / عثماني (الأميري)', class: 'font-amiri' },
@@ -92,6 +90,10 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
   const [isAudioLoading, setIsAudioLoading] = useState<boolean>(false);
   const [volume, setVolume] = useState<number>(0.8);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [playbackRate, setPlaybackRate] = useState<number>(1.0);
+  const [isLooping, setIsLooping] = useState<boolean>(false);
+  const [audioError, setAudioError] = useState<boolean>(false);
+  const [usingFallback, setUsingFallback] = useState<boolean>(false);
 
   // Tafsir request state
   const [isLoadingTafsir, setIsLoadingTafsir] = useState<boolean>(false);
@@ -103,6 +105,11 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
   const [lookupAyah, setLookupAyah] = useState<number>(1);
   const [lookupResult, setLookupResult] = useState<string | null>(null);
   const [isLookingUp, setIsLookingUp] = useState<boolean>(false);
+
+  // Quick Directory Audio Play state
+  const [directPlaySurahNum, setDirectPlaySurahNum] = useState<number>(1);
+  const [directAudioPlaying, setDirectAudioPlaying] = useState<boolean>(false);
+  const [directAudioLoading, setDirectAudioLoading] = useState<boolean>(false);
 
   const filteredSurahs = quranMetadata.filter((surah) => {
     return (
@@ -293,10 +300,12 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
       setCurrentTime(0);
       setDuration(0);
       setIsAudioLoading(false);
+      setAudioError(false);
+      setUsingFallback(false);
       
       if (selectedSurah) {
         const padded = String(selectedSurah.number).padStart(3, '0');
-        const reciter = RECITERS.find(r => r.id === activeReciterId);
+        const reciter = QURAN_RECITERS.find(r => r.id === activeReciterId) || QURAN_RECITERS[0];
         if (reciter) {
           audioRef.current.src = `${reciter.url}${padded}.mp3`;
           audioRef.current.load();
@@ -304,6 +313,18 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
       }
     }
   }, [selectedSurah]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = isLooping;
+    }
+  }, [isLooping]);
 
   useEffect(() => {
     return () => {
@@ -315,13 +336,15 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
 
   const handleReciterChange = (reciterId: string) => {
     setActiveReciterId(reciterId);
+    setUsingFallback(false);
+    setAudioError(false);
     if (!selectedSurah) return;
 
     const wasPlaying = isPlaying;
     setIsAudioLoading(true);
 
     const padded = String(selectedSurah.number).padStart(3, '0');
-    const reciter = RECITERS.find(r => r.id === reciterId);
+    const reciter = QURAN_RECITERS.find(r => r.id === reciterId) || QURAN_RECITERS[0];
     if (reciter && audioRef.current) {
       audioRef.current.src = `${reciter.url}${padded}.mp3`;
       audioRef.current.load();
@@ -329,12 +352,39 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
         audioRef.current.play().then(() => {
           setIsPlaying(true);
         }).catch(err => {
-          console.error("Audio play failed:", err);
-          setIsPlaying(false);
+          console.error("Audio play failed, trying fallback:", err);
+          handleAudioError();
         });
       } else {
         setIsPlaying(false);
       }
+    }
+  };
+
+  const handleAudioError = () => {
+    if (!selectedSurah || !audioRef.current) return;
+    const padded = String(selectedSurah.number).padStart(3, '0');
+    const reciter = QURAN_RECITERS.find(r => r.id === activeReciterId) || QURAN_RECITERS[0];
+
+    if (!usingFallback && reciter?.fallbackUrl) {
+      // Auto-fallback to secondary high speed mirror
+      setUsingFallback(true);
+      setIsAudioLoading(true);
+      audioRef.current.src = `${reciter.fallbackUrl}${padded}.mp3`;
+      audioRef.current.load();
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+        setIsAudioLoading(false);
+        setAudioError(false);
+      }).catch(() => {
+        setIsAudioLoading(false);
+        setIsPlaying(false);
+        setAudioError(true);
+      });
+    } else {
+      setIsAudioLoading(false);
+      setIsPlaying(false);
+      setAudioError(true);
     }
   };
 
@@ -344,15 +394,46 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
+      setAudioError(false);
       setIsAudioLoading(true);
       audioRef.current.play().then(() => {
         setIsPlaying(true);
         setIsAudioLoading(false);
       }).catch(err => {
-        console.error("Failed to play audio:", err);
-        setIsPlaying(false);
-        setIsAudioLoading(false);
+        console.error("Failed to play audio, trying fallback:", err);
+        handleAudioError();
       });
+    }
+  };
+
+  const skipTime = (delta: number) => {
+    if (!audioRef.current) return;
+    const newTime = Math.min(Math.max(audioRef.current.currentTime + delta, 0), duration || 1000);
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const cyclePlaybackRate = () => {
+    const rates = [1.0, 1.25, 1.5, 0.75];
+    const nextIdx = (rates.indexOf(playbackRate) + 1) % rates.length;
+    setPlaybackRate(rates[nextIdx]);
+  };
+
+  const handleNextSurah = () => {
+    if (!selectedSurah) return;
+    const nextNum = selectedSurah.number === 114 ? 1 : selectedSurah.number + 1;
+    const nextMeta = quranMetadata.find(s => s.number === nextNum);
+    if (nextMeta) {
+      handleSelectSurah(nextMeta);
+    }
+  };
+
+  const handlePrevSurah = () => {
+    if (!selectedSurah) return;
+    const prevNum = selectedSurah.number === 1 ? 114 : selectedSurah.number - 1;
+    const prevMeta = quranMetadata.find(s => s.number === prevNum);
+    if (prevMeta) {
+      handleSelectSurah(prevMeta);
     }
   };
 
@@ -404,16 +485,26 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
           if (audioRef.current) {
             setDuration(audioRef.current.duration);
             setIsAudioLoading(false);
+            setAudioError(false);
           }
         }}
-        onPlay={() => setIsPlaying(true)}
+        onPlay={() => {
+          setIsPlaying(true);
+          setIsAudioLoading(false);
+        }}
         onPause={() => setIsPlaying(false)}
         onEnded={() => {
-          setIsPlaying(false);
-          setCurrentTime(0);
+          if (!isLooping) {
+            setIsPlaying(false);
+            setCurrentTime(0);
+          }
         }}
+        onError={() => handleAudioError()}
         onWaiting={() => setIsAudioLoading(true)}
-        onCanPlay={() => setIsAudioLoading(false)}
+        onCanPlay={() => {
+          setIsAudioLoading(false);
+          setAudioError(false);
+        }}
       />
       
       {/* 1. Main Quran Directory or Selected Surah */}
@@ -504,6 +595,125 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Quick Reciter Audio Station (Play Any Surah with Any Sheikh) */}
+          <div className="p-4 sm:p-5 bg-gradient-to-br from-[#0B252A] to-[#040C0E] border border-amber-500/30 rounded-3xl space-y-4 shadow-xl">
+            <div className="flex items-center justify-between gap-3 border-b border-emerald-500/20 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 bg-amber-500/20 text-amber-300 rounded-xl border border-amber-400/30">
+                  <Headphones className="w-4 h-4" />
+                </span>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-amber-300">مشغل تلاوات القرآن بأصوات كبار قراء السعودية والعالم الإسلامي</h4>
+                  <p className="text-[11px] text-slate-300">اختر السورة والشيخ القارئ واستمع للتلاوة المباركة كاملة</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Select Reciter */}
+              <div className="flex flex-col gap-1 text-xs">
+                <span className="text-slate-300 font-bold">القارئ الشيخ:</span>
+                <select
+                  id="quick-reciter-select"
+                  value={activeReciterId}
+                  onChange={(e) => handleReciterChange(e.target.value)}
+                  className="px-3 py-2.5 bg-[#030A0C] border border-emerald-500/30 rounded-xl text-xs font-bold text-amber-300 focus:outline-hidden cursor-pointer"
+                >
+                  <optgroup label="🕋 أئمة الحرم المكي والمسجد النبوي" className="bg-[#061214] text-emerald-400 font-bold">
+                    {QURAN_RECITERS.filter(r => r.tag === 'حرم مكي' || r.tag === 'مسجد نبوي').map((r) => (
+                      <option key={r.id} value={r.id} className="bg-[#061214] text-white">
+                        {r.name} ({r.country})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🇸🇦 كبار قراء المملكة العربية السعودية" className="bg-[#061214] text-emerald-400 font-bold">
+                    {QURAN_RECITERS.filter(r => r.tag === 'قراء السعودية').map((r) => (
+                      <option key={r.id} value={r.id} className="bg-[#061214] text-white">
+                        {r.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🌟 مشاهير القراء في العالم الإسلامي" className="bg-[#061214] text-emerald-400 font-bold">
+                    {QURAN_RECITERS.filter(r => r.tag === 'مشاهير القراء').map((r) => (
+                      <option key={r.id} value={r.id} className="bg-[#061214] text-white">
+                        {r.name} ({r.country})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="📜 عمالقة التلاوة الكلاسيكية" className="bg-[#061214] text-emerald-400 font-bold">
+                    {QURAN_RECITERS.filter(r => r.tag === 'عمالقة التلاوة').map((r) => (
+                      <option key={r.id} value={r.id} className="bg-[#061214] text-white">
+                        {r.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* Select Surah */}
+              <div className="flex flex-col gap-1 text-xs">
+                <span className="text-slate-300 font-bold">السورة الكريمة:</span>
+                <select
+                  id="quick-surah-select"
+                  value={directPlaySurahNum}
+                  onChange={(e) => {
+                    const num = Number(e.target.value);
+                    setDirectPlaySurahNum(num);
+                    const meta = quranMetadata.find(s => s.number === num);
+                    if (meta) {
+                      handleSelectSurah(meta);
+                    }
+                  }}
+                  className="px-3 py-2.5 bg-[#030A0C] border border-emerald-500/30 rounded-xl text-xs font-bold text-white focus:outline-hidden cursor-pointer"
+                >
+                  {quranMetadata.map(s => (
+                    <option key={s.number} value={s.number} className="bg-[#061214] text-white">
+                      {s.number}. سورة {s.name} ({s.numberOfAyahs} آية - {s.revelationType === 'Meccan' ? 'مكية' : 'مدنية'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Quick Play Button & Selected Reciter Tag */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 bg-emerald-950/80 border border-emerald-500/30 rounded-lg text-[10px] font-bold text-emerald-300">
+                  {QURAN_RECITERS.find(r => r.id === activeReciterId)?.country || 'المملكة العربية السعودية'}
+                </span>
+                <span className="px-2.5 py-1 bg-amber-500/15 border border-amber-400/20 rounded-lg text-[10px] font-bold text-amber-300">
+                  {QURAN_RECITERS.find(r => r.id === activeReciterId)?.riwayah || 'حفص عن عاصم'}
+                </span>
+              </div>
+
+              <button
+                id="quick-listen-now-btn"
+                type="button"
+                onClick={() => {
+                  const meta = quranMetadata.find(s => s.number === directPlaySurahNum);
+                  if (meta) {
+                    handleSelectSurah(meta);
+                    setTimeout(() => {
+                      if (audioRef.current) {
+                        const padded = String(meta.number).padStart(3, '0');
+                        const reciter = QURAN_RECITERS.find(r => r.id === activeReciterId) || QURAN_RECITERS[0];
+                        audioRef.current.src = `${reciter.url}${padded}.mp3`;
+                        audioRef.current.load();
+                        audioRef.current.play().then(() => {
+                          setIsPlaying(true);
+                        }).catch(() => {});
+                      }
+                    }, 400);
+                  }
+                }}
+                className="px-5 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:brightness-110 text-slate-950 text-xs font-black rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Play className="w-4 h-4 fill-slate-950" />
+                <span>فتح السورة والاستماع للشيخ الآن</span>
+              </button>
+            </div>
           </div>
 
           {/* Directory Search */}
@@ -643,16 +853,42 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
               </div>
               
               {/* Reciter Selector */}
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-slate-400 font-bold">القارئ:</span>
+              <div className="flex items-center gap-2 max-w-full">
+                <span className="text-[10px] text-slate-400 font-bold shrink-0">القارئ الشيخ:</span>
                 <select
+                  id="quran-reciter-select"
                   value={activeReciterId}
                   onChange={(e) => handleReciterChange(e.target.value)}
-                  className="bg-[#030A0C] border border-emerald-500/30 text-emerald-200 text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-hidden cursor-pointer"
+                  className="bg-[#030A0C] border border-emerald-500/30 text-amber-300 text-xs font-black rounded-xl px-3 py-1.5 focus:outline-hidden cursor-pointer max-w-[220px] sm:max-w-xs truncate"
                 >
-                  {RECITERS.map((r) => (
-                    <option key={r.id} value={r.id} className="bg-[#061214] text-white">{r.name}</option>
-                  ))}
+                  <optgroup label="🕋 أئمة الحرم المكي والمسجد النبوي" className="bg-[#061214] text-emerald-400 font-bold">
+                    {QURAN_RECITERS.filter(r => r.tag === 'حرم مكي' || r.tag === 'مسجد نبوي').map((r) => (
+                      <option key={r.id} value={r.id} className="bg-[#061214] text-white">
+                        {r.name} ({r.country})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🇸🇦 كبار قراء المملكة العربية السعودية" className="bg-[#061214] text-emerald-400 font-bold">
+                    {QURAN_RECITERS.filter(r => r.tag === 'قراء السعودية').map((r) => (
+                      <option key={r.id} value={r.id} className="bg-[#061214] text-white">
+                        {r.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🌟 مشاهير القراء في العالم الإسلامي" className="bg-[#061214] text-emerald-400 font-bold">
+                    {QURAN_RECITERS.filter(r => r.tag === 'مشاهير القراء').map((r) => (
+                      <option key={r.id} value={r.id} className="bg-[#061214] text-white">
+                        {r.name} ({r.country})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="📜 عمالقة التلاوة الكلاسيكية" className="bg-[#061214] text-emerald-400 font-bold">
+                    {QURAN_RECITERS.filter(r => r.tag === 'عمالقة التلاوة').map((r) => (
+                      <option key={r.id} value={r.id} className="bg-[#061214] text-white">
+                        {r.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
             </div>
@@ -660,8 +896,32 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
             {/* Controls, progress bar and volume */}
             <div className="flex flex-col md:flex-row items-center gap-4 justify-between" dir="rtl">
               
-              {/* Main Play/Pause block */}
-              <div className="flex items-center gap-3 w-full md:w-auto justify-start">
+              {/* Main Play/Pause & Navigation block */}
+              <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-start flex-wrap">
+                {/* Prev Surah */}
+                <button
+                  id="audio-prev-surah-btn"
+                  type="button"
+                  title="السورة السابقة"
+                  onClick={handlePrevSurah}
+                  className="p-2.5 rounded-xl bg-[#040C0E] hover:bg-emerald-950 border border-emerald-500/20 text-slate-300 hover:text-emerald-300 transition-colors cursor-pointer active:scale-95"
+                >
+                  <SkipBack className="w-4 h-4" />
+                </button>
+
+                {/* Rewind 10s */}
+                <button
+                  id="audio-rewind-10-btn"
+                  type="button"
+                  title="رجوع 10 ثواني"
+                  onClick={() => skipTime(-10)}
+                  className="p-2.5 rounded-xl bg-[#040C0E] hover:bg-emerald-950 border border-emerald-500/20 text-slate-300 hover:text-emerald-300 transition-colors cursor-pointer text-xs font-black flex items-center gap-1 active:scale-95"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="text-[10px] font-mono">10</span>
+                </button>
+
+                {/* Play / Pause button */}
                 <button
                   type="button"
                   onClick={handlePlayPause}
@@ -681,10 +941,59 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
                   )}
                 </button>
 
-                <div className="flex flex-col text-right">
+                {/* Forward 10s */}
+                <button
+                  id="audio-forward-10-btn"
+                  type="button"
+                  title="تقديم 10 ثواني"
+                  onClick={() => skipTime(10)}
+                  className="p-2.5 rounded-xl bg-[#040C0E] hover:bg-emerald-950 border border-emerald-500/20 text-slate-300 hover:text-emerald-300 transition-colors cursor-pointer text-xs font-black flex items-center gap-1 active:scale-95"
+                >
+                  <span className="text-[10px] font-mono">10</span>
+                  <RotateCw className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Next Surah */}
+                <button
+                  id="audio-next-surah-btn"
+                  type="button"
+                  title="السورة التالية"
+                  onClick={handleNextSurah}
+                  className="p-2.5 rounded-xl bg-[#040C0E] hover:bg-emerald-950 border border-emerald-500/20 text-slate-300 hover:text-emerald-300 transition-colors cursor-pointer active:scale-95"
+                >
+                  <SkipForward className="w-4 h-4" />
+                </button>
+
+                {/* Speed & Repeat */}
+                <div className="flex items-center gap-1.5 mr-1">
+                  <button
+                    id="audio-speed-btn"
+                    type="button"
+                    title="سرعة التلاوة"
+                    onClick={cyclePlaybackRate}
+                    className="px-2.5 py-1.5 rounded-xl bg-[#040C0E] hover:bg-emerald-950 border border-emerald-500/20 text-[10px] font-black text-amber-300 transition-colors cursor-pointer"
+                  >
+                    {playbackRate}x
+                  </button>
+                  <button
+                    id="audio-loop-btn"
+                    type="button"
+                    title="تكرار السورة"
+                    onClick={() => setIsLooping(!isLooping)}
+                    className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                      isLooping 
+                        ? 'bg-amber-500 text-slate-950 border-amber-400 font-black' 
+                        : 'bg-[#040C0E] text-slate-400 border-emerald-500/20 hover:text-white'
+                    }`}
+                  >
+                    <Repeat className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col text-right pr-2">
                   <span className="text-[10px] font-bold text-slate-400">حالة التلاوة</span>
                   <span className="text-xs font-black text-white">
-                    {isAudioLoading ? 'جاري التحميل...' : isPlaying ? 'يُرتل الآن...' : 'جاهز للاستماع'}
+                    {isAudioLoading ? 'جاري التحميل...' : isPlaying ? 'يُرتل الآن...' : audioError ? 'تعذر التحميل' : 'جاهز للاستماع'}
                   </span>
                 </div>
               </div>
@@ -735,6 +1044,28 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
               </div>
 
             </div>
+
+            {/* Error or Fallback Status Notice */}
+            {usingFallback && !audioError && (
+              <div className="flex items-center justify-between px-3.5 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300">
+                <span>⚡ تم تفعيل خادم التلاوة الاحتياطي فائق السرعة لضمان استمرار الاستماع بدون انقطاع.</span>
+              </div>
+            )}
+            {audioError && (
+              <div className="flex items-center justify-between px-3.5 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-300">
+                <span>⚠️ تعذر تشغيل هذا القارئ حالياً بسبب ضغط الخادم. يمكنك التبديل لقارئ آخر أو إعادة المحاولة.</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAudioError(false);
+                    handleAudioError();
+                  }}
+                  className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-[10px] cursor-pointer"
+                >
+                  إعادة المحاولة
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Tafsir results display */}

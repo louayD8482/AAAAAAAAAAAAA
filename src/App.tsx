@@ -38,7 +38,9 @@ import {
   User,
   UserCheck,
   HeartHandshake,
-  Search
+  Search,
+  Smartphone,
+  RotateCw
 } from 'lucide-react';
 
 import { AppSettings } from './types';
@@ -56,6 +58,7 @@ import AIChatSection from './components/AIChatSection';
 import RuqyahSection from './components/RuqyahSection';
 import VisualAdhanModal from './components/VisualAdhanModal';
 import VerseOfTheDay from './components/VerseOfTheDay';
+import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
 import ProfileSection from './components/ProfileSection';
 import EhsanIslamicPlatformSection from './components/EhsanIslamicPlatformSection';
 import WelcomeSplashScreen from './components/WelcomeSplashScreen';
@@ -63,6 +66,7 @@ import MakkahLiveRadioPlayer from './components/MakkahLiveRadioPlayer';
 import UnifiedSearchFavoritesModal from './components/UnifiedSearchFavoritesModal';
 import { ISLAMIC_AVATARS } from './assets/avatars';
 import { requestAllPermissions, scheduleAllNativeNotifications, checkPermissionsStatus } from './utils/nativeNotifications';
+import { playAdhanAudio, stopAdhanAudio, playPrePrayerChime, playIqamaChime } from './utils/adhanPlayer';
 
 // @ts-ignore
 import defaultLogo from './assets/images/app_logo_avatar_1787082876013.jpg';
@@ -124,6 +128,35 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showShareToast, setShowShareToast] = useState<boolean>(false);
+  const [isLandscape, setIsLandscape] = useState<boolean>(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState<boolean>(false);
+
+  // Lock orientation to portrait & detect landscape on mobile devices
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && window.screen && (window.screen.orientation as any)?.lock) {
+        (window.screen.orientation as any).lock('portrait').catch(() => {});
+      }
+    } catch (e) {}
+
+    const checkOrientation = () => {
+      if (typeof window !== 'undefined') {
+        const isTouchMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const isSmallScreen = window.innerWidth < 768 && window.innerHeight < 480;
+        const isLand = isTouchMobile && isSmallScreen && window.innerWidth > window.innerHeight;
+        setIsLandscape(isLand);
+      }
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
   
   const [settings, setSettings] = useState<AppSettings>(() => {
     const stored = localStorage.getItem('noor_settings');
@@ -386,6 +419,10 @@ export default function App() {
           if (currentHHMM === preHHMM) {
             const preTriggerId = `${todayStr}-pre-${p.name}-${preMinOffset}min`;
             if (!triggeredList.includes(preTriggerId)) {
+              // Play soft pre-prayer chime alert
+              if (settings.soundEnabled) {
+                playPrePrayerChime();
+              }
               if ('Notification' in window && Notification.permission === 'granted') {
                 try {
                   new Notification(`اقترب موعد صلاة ${p.arabicName} 🕌 (متبقي ${preMinOffset} دقائق)`, {
@@ -407,6 +444,11 @@ export default function App() {
           if (!triggeredList.includes(uniqueTriggerId)) {
             const info = PRAYERS_INFO[p.name as keyof typeof PRAYERS_INFO];
             
+            // Trigger authentic Adhan audio playback
+            if (settings.soundEnabled || settings.adhanReminder) {
+              playAdhanAudio(settings.selectedAdhanVoice || 'makkah', 1.0);
+            }
+
             // Browser Background notification (Adhan Reminder)
             if (settings.adhanReminder) {
               if ('Notification' in window && Notification.permission === 'granted') {
@@ -452,6 +494,9 @@ export default function App() {
           if (currentHHMM === postHHMM) {
             const postTriggerId = `${todayStr}-post-iqama-${p.name}-${iqamaOffset}min`;
             if (!triggeredList.includes(postTriggerId)) {
+              if (settings.soundEnabled) {
+                playIqamaChime();
+              }
               if ('Notification' in window && Notification.permission === 'granted') {
                 try {
                   new Notification(`حان وقت صلاة ${p.arabicName} - إقامة الصلاة 🤲`, {
@@ -485,6 +530,24 @@ export default function App() {
       root.classList.remove('dark');
     }
   }, [settings]);
+
+  // Global Keyboard shortcuts (Ctrl+K / Cmd+K to search, Esc to close modals or return home)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchFavModalOpen(prev => !prev);
+      } else if (e.key === 'Escape') {
+        if (isSearchFavModalOpen) {
+          setIsSearchFavModalOpen(false);
+        } else if (isSettingsOpen) {
+          setIsSettingsOpen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchFavModalOpen, isSettingsOpen]);
 
   const handleUpdateSettings = useCallback((newSettings: AppSettings) => {
     setSettings(newSettings);
@@ -966,69 +1029,40 @@ export default function App() {
       className="min-h-screen bg-[#FCFAF6] dark:bg-[#070D0E] text-slate-800 dark:text-[#E2EAEB] transition-colors duration-500 flex flex-col font-sans islamic-pattern"
       dir={isEn ? "ltr" : "rtl"}
     >
-      {/* Main Premium App Bar with iOS Native Safe-Area - STRICT FIXED POSITION */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#080E10]/95 backdrop-blur-xl border-b border-[#EBE7DF] dark:border-[#142225] px-3 sm:px-8 py-3 flex items-center justify-between shadow-md pt-[env(safe-area-inset-top,0px)] h-[4.5rem] sm:h-[5rem]">
+      {/* Main Premium App Bar with iOS Native Safe-Area & Dynamic Island handling (Only shown inside the app, never on the welcome splash screen) */}
+      {!showWelcomeSplash && (
+        <header className="top-bar px-3 sm:px-8 py-2 flex items-center justify-between border-b border-[#EBE7DF] dark:border-[#142225]">
         
-        {/* Title and Logo */}
-        <div 
-          onClick={() => handleNavigateToSection(null)}
-          className="flex items-center gap-3 sm:gap-4 cursor-pointer hover:opacity-95 active:scale-[0.98] transition-all group"
-          title={isEn ? "Return to main menu" : "العودة للقائمة الرئيسية"}
-        >
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-700/15 overflow-hidden border-2 border-emerald-500/40 group-hover:rotate-6 transition-all duration-300 shrink-0 bg-emerald-950">
-            <img 
-              src={settings.appLogoUrl || ISLAMIC_AVATARS.appLogo} 
-              alt="Logo" 
-              className="w-full h-full object-cover" 
-              referrerPolicy="no-referrer" 
-            />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-emerald-950 dark:text-emerald-300 font-kufi tracking-tight leading-tight">
-              {settings.appName || (isEn ? "Noor Al-Islam" : "نور الإسلام")}
-            </h1>
-          </div>
-        </div>
-
-        {/* Dynamic Hijri & Gregorian clock display (Hidden on extra small screens) */}
-        <div className="hidden lg:flex flex-col items-center justify-center text-center bg-[#F4EFE6]/70 dark:bg-[#0C1517] px-4.5 py-1.5 rounded-2xl border border-[#E9E1D2]/60 dark:border-[#1A2D31]/60">
-          <div className="flex items-center gap-2 text-xs font-black text-emerald-900 dark:text-emerald-300">
-            <CalendarIcon className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span className="font-kufi">🌙 {isEn ? "Hijri:" : "الهجري:"} {getHijriDate()}</span>
-          </div>
-          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-bold mt-0.5">
-            <span>📅 {isEn ? "Gregorian:" : "الميلادي:"} {getGregorianDate()}</span>
-            <span className="text-slate-300 dark:text-slate-700">|</span>
-            <span className="font-mono text-emerald-700 dark:text-amber-400 font-extrabold">{currentTime.toLocaleTimeString(isEn ? 'en-US' : 'ar-EG')}</span>
-          </div>
-        </div>
-
-        {/* Action Controls - Clean Luxury Buttons matching clean circular green/gold aesthetic */}
+        {/* Left Side (LTR): Action Controls - [Globe] [Theme] [Profile] [Share] [Settings] */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           
-          {/* 1. Settings Button */}
+          {/* 1. Language Toggle Button */}
           <button
-            id="settings-modal-btn"
-            onClick={() => setIsSettingsOpen(true)}
+            id="language-toggle-btn"
+            onClick={toggleLanguage}
             className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
-            title={isEn ? "Settings & Controls" : "الإعدادات والتخصيص"}
-            aria-label="Settings"
+            title={isEn ? "Switch to Arabic" : "تغيير اللغة"}
+            aria-label="Toggle Language"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
-              <Settings className="w-4 h-4 text-[#2DD4BF]" />
+              <Globe className="w-4 h-4 text-[#34D399]" />
             </div>
           </button>
 
-          {/* 2. Share App Button */}
+          {/* 2. Dark/Light Theme Toggle Button */}
           <button
-            id="share-app-btn"
-            onClick={handleShareApp}
+            id="theme-toggle-btn"
+            onClick={toggleTheme}
             className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
-            title={isEn ? "Share App" : "مشاركة التطبيق"}
-            aria-label="Share App"
+            title={isEn ? "Toggle theme" : "الإضاءة والمظهر"}
+            aria-label="Toggle Theme"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
-              <Share2 className="w-4 h-4 text-[#FBBF24]" />
+              {settings.theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-[#FACC15]" />
+              ) : (
+                <Moon className="w-4 h-4 text-[#FACC15]" />
+              )}
             </div>
           </button>
 
@@ -1046,48 +1080,81 @@ export default function App() {
               <img 
                 src={ISLAMIC_AVATARS.profile} 
                 alt="Profile" 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover" 
                 referrerPolicy="no-referrer" 
               />
             </div>
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border border-[#061214] rounded-full animate-pulse" />
           </button>
 
-          {/* 4. Dark/Light Theme Toggle Button */}
+          {/* 4. Share App Button */}
           <button
-            id="theme-toggle-btn"
-            onClick={toggleTheme}
+            id="share-app-btn"
+            onClick={handleShareApp}
             className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
-            title={isEn ? "Toggle theme" : "الإضاءة والمظهر"}
-            aria-label="Toggle Theme"
+            title={isEn ? "Share App" : "مشاركة التطبيق"}
+            aria-label="Share App"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
-              {settings.theme === 'dark' ? (
-                <Sun className="w-4 h-4 text-[#FACC15]" />
-              ) : (
-                <Moon className="w-4 h-4 text-[#FACC15]" />
-              )}
+              <Share2 className="w-4 h-4 text-[#FBBF24]" />
             </div>
           </button>
 
-          {/* 5. Language Toggle Button */}
+          {/* 5. Settings Button */}
           <button
-            id="language-toggle-btn"
-            onClick={toggleLanguage}
+            id="settings-modal-btn"
+            onClick={() => setIsSettingsOpen(true)}
             className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
-            title={isEn ? "Switch to Arabic" : "تغيير اللغة"}
-            aria-label="Toggle Language"
+            title={isEn ? "Settings & Controls" : "الإعدادات والتخصيص"}
+            aria-label="Settings"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
-              <Globe className="w-4 h-4 text-[#34D399]" />
+              <Settings className="w-4 h-4 text-[#2DD4BF]" />
             </div>
           </button>
 
         </div>
+
+        {/* Dynamic Hijri & Gregorian clock display (Hidden on small screens) */}
+        <div className="hidden lg:flex flex-col items-center justify-center text-center bg-[#F4EFE6]/70 dark:bg-[#0C1517] px-4.5 py-1.5 rounded-2xl border border-[#E9E1D2]/60 dark:border-[#1A2D31]/60">
+          <div className="flex items-center gap-2 text-xs font-black text-emerald-900 dark:text-emerald-300">
+            <CalendarIcon className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span className="font-kufi">🌙 {isEn ? "Hijri:" : "الهجري:"} {getHijriDate()}</span>
+          </div>
+          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-bold mt-0.5">
+            <span>📅 {isEn ? "Gregorian:" : "الميلادي:"} {getGregorianDate()}</span>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <span className="font-mono text-emerald-700 dark:text-amber-400 font-extrabold">{currentTime.toLocaleTimeString(isEn ? 'en-US' : 'ar-EG')}</span>
+          </div>
+        </div>
+
+        {/* Right Side (LTR): Title and Mosque Logo with RTL text rendering */}
+        <div 
+          onClick={() => handleNavigateToSection(null)}
+          className="flex items-center gap-2.5 sm:gap-3.5 cursor-pointer hover:opacity-95 active:scale-[0.98] transition-all group shrink-0"
+          dir="rtl"
+          title={isEn ? "Return to main menu" : "العودة للقائمة الرئيسية"}
+        >
+          <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-700/15 overflow-hidden border-2 border-emerald-500/40 group-hover:rotate-6 transition-all duration-300 shrink-0 bg-emerald-950">
+            <img 
+              src={settings.appLogoUrl || ISLAMIC_AVATARS.appLogo} 
+              alt="Logo" 
+              className="w-full h-full object-cover" 
+              referrerPolicy="no-referrer" 
+            />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-emerald-950 dark:text-emerald-300 font-kufi tracking-tight leading-tight select-none">
+              {settings.appName || (isEn ? "Noor Al-Islam" : "نور الإسلام")}
+            </h1>
+          </div>
+        </div>
       </header>
+      )}
 
       {/* Main Layout Grid with safe offset for fixed Header */}
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 pt-[calc(5.25rem+env(safe-area-inset-top,0px))] sm:pt-[calc(6rem+env(safe-area-inset-top,0px))]">
+      {!showWelcomeSplash && (
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 pt-[calc(max(env(safe-area-inset-top,0px),56px)+3.75rem)] sm:pt-[calc(max(env(safe-area-inset-top,0px),56px)+4.25rem)]">
         <AnimatePresence mode="wait">
           {activeSection === null ? (
             <motion.div
@@ -1445,27 +1512,39 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+      )}
 
       {/* Persistent Islamic footer dedication */}
-      <footer className="w-full bg-white dark:bg-[#050A0B] border-t border-[#EBE7DF] dark:border-[#132326] py-10 px-6 sm:px-12 text-center text-xs text-slate-500 dark:text-slate-400 space-y-4 font-sans mt-12">
-        <div className="max-w-2xl mx-auto space-y-2.5 leading-relaxed font-semibold">
-          <p className="text-[15px] text-emerald-900 dark:text-emerald-300 font-extrabold font-amiri">
-            {settings.dedicationText || "هذا التطبيق صدقة جارية بإذن اللّٰه تعالى عن لؤي بن حسين وعن والده رحمه اللّٰه وغفر له وجميع المسلمين والمسلمات الأحياء منهم والأموات."}
-          </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            تم التطوير بحبّ وإتقان ليكون تطبيقاً سهلاً، جميلاً وسلساً للمستخدمين. تقبل الله طاعاتكم جميعاً.
-          </p>
-        </div>
-        <div className="flex flex-wrap justify-center items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-900 max-w-xl mx-auto">
-          <span>المطور: {settings.developerName || "لؤي بن حسين"}</span>
-          <span>•</span>
-          <span>© 2026 - جميع الحقوق محفوظة</span>
-          <span>•</span>
-          <a href={settings.snapchatUrl || "https://snapchat.com/t/vezdvWWb"} target="_blank" rel="noreferrer" className="text-amber-600 dark:text-amber-400 font-extrabold hover:underline">
-            تابعني على سناب شات 👻
-          </a>
-        </div>
-      </footer>
+      {!showWelcomeSplash && (
+        <footer className="w-full bg-white dark:bg-[#050A0B] border-t border-[#EBE7DF] dark:border-[#132326] py-10 px-6 sm:px-12 text-center text-xs text-slate-500 dark:text-slate-400 space-y-4 font-sans mt-12">
+          <div className="max-w-2xl mx-auto space-y-2.5 leading-relaxed font-semibold">
+            <p className="text-[15px] text-emerald-900 dark:text-emerald-300 font-extrabold font-amiri">
+              {settings.dedicationText || "هذا التطبيق صدقة جارية بإذن اللّٰه تعالى عن لؤي بن حسين وعن والده رحمه اللّٰه وغفر له وجميع المسلمين والمسلمات الأحياء منهم والأموات."}
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              تم التطوير بحبّ وإتقان ليكون تطبيقاً سهلاً، جميلاً وسلساً للمستخدمين. تقبل الله طاعاتكم جميعاً.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-900 max-w-xl mx-auto">
+            <span>المطور: {settings.developerName || "لؤي بن حسين"}</span>
+            <span>•</span>
+            <span>© 2026 - جميع الحقوق محفوظة</span>
+            <span>•</span>
+            <button
+              id="footer-privacy-policy-btn"
+              type="button"
+              onClick={() => setIsPrivacyModalOpen(true)}
+              className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer"
+            >
+              {isEn ? "Privacy Policy" : "سياسة الخصوصية"}
+            </button>
+            <span>•</span>
+            <a href={settings.snapchatUrl || "https://snapchat.com/t/vezdvWWb"} target="_blank" rel="noreferrer" className="text-amber-600 dark:text-amber-400 font-extrabold hover:underline">
+              تابعني على سناب شات 👻
+            </a>
+          </div>
+        </footer>
+      )}
 
       {/* Welcome Splash Screen on app open */}
       <AnimatePresence>
@@ -1473,7 +1552,12 @@ export default function App() {
           <WelcomeSplashScreen
             settings={settings}
             isEn={isEn}
-            onEnter={() => setShowWelcomeSplash(false)}
+            onEnter={(secId) => {
+              setShowWelcomeSplash(false);
+              if (secId) {
+                handleNavigateToSection(secId);
+              }
+            }}
           />
         )}
       </AnimatePresence>
@@ -1484,6 +1568,13 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
+      />
+
+      {/* Official App Store Privacy Policy Modal */}
+      <PrivacyPolicyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+        isEn={isEn}
       />
 
       {/* Universal Search & Favorites Modal */}
@@ -1507,6 +1598,50 @@ export default function App() {
         soundEnabled={settings.soundEnabled}
         isEn={isEn}
       />
+      {/* Landscape Orientation Lock Screen overlay for mobile devices */}
+      <AnimatePresence>
+        {isLandscape && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[99999] bg-[#061214]/98 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center text-white select-none"
+            dir={isEn ? "ltr" : "rtl"}
+          >
+            <div className="relative mb-6">
+              <div className="w-20 h-20 rounded-3xl bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center shadow-2xl">
+                <Smartphone className="w-10 h-10 text-emerald-400 animate-pulse" />
+              </div>
+              <motion.div 
+                animate={{ rotate: [0, -90, 0] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow-lg font-black"
+              >
+                <RotateCw className="w-4 h-4" />
+              </motion.div>
+            </div>
+
+            <h2 className="text-xl sm:text-2xl font-black text-amber-300 font-kufi mb-2">
+              {isEn ? "Please Rotate Your Device to Portrait" : "يرجى تدوير الهاتف للوضع الرأسي 📱"}
+            </h2>
+            <p className="text-sm sm:text-base text-slate-300 max-w-md font-amiri leading-relaxed">
+              {isEn 
+                ? "Noor Al-Islam is optimized to provide the most serene and beautiful experience in portrait orientation on iPhone and mobile devices." 
+                : "تم تصميم تطبيق «نور الإسلام» ليعمل بأعلى دقة وجمال في الوضع الرأسي (العمودي) لجميع أجهزة الآيفون والهواتف الذكية."}
+            </p>
+
+            <button
+              id="dismiss-landscape-btn"
+              type="button"
+              onClick={() => setIsLandscape(false)}
+              className="mt-6 px-6 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full text-xs font-bold text-slate-200 transition-all cursor-pointer active:scale-95"
+            >
+              {isEn ? "Continue in Landscape" : "المتابعة بالوضع العرضي"}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Share Notification Toast */}
       <AnimatePresence>
         {showShareToast && (

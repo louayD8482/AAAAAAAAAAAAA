@@ -18,17 +18,17 @@ import { ISLAMIC_AVATARS } from '../assets/avatars';
 interface WelcomeSplashScreenProps {
   settings: AppSettings;
   isEn?: boolean;
-  onEnter: () => void;
+  onEnter: (sectionId?: string) => void;
 }
 
 export default function WelcomeSplashScreen({ settings, isEn = false, onEnter }: WelcomeSplashScreenProps) {
   const [dontShowAgain, setDontShowAgain] = useState<boolean>(false);
 
-  const handleEnterClick = () => {
+  const handleEnterClick = (sectionId?: string) => {
     if (dontShowAgain) {
       localStorage.setItem('noor_hide_welcome_splash', 'true');
     }
-    onEnter();
+    onEnter(sectionId);
   };
 
   return (
@@ -85,27 +85,36 @@ export default function WelcomeSplashScreen({ settings, isEn = false, onEnter }:
           </p>
         </div>
 
-        {/* 3 Prominent Horizontal Feature Sections */}
+        {/* 3 Prominent Feature Shortcut Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 w-full pt-1">
-          <div className="w-full sm:w-1/3 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-200 shadow-xs">
-            <BookOpen className="w-4 h-4 text-amber-400 shrink-0" />
-            <span className="text-xs font-bold font-kufi whitespace-nowrap">القرآن والتفسير 📖</span>
-          </div>
-          <div className="w-full sm:w-1/3 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-200 shadow-xs">
-            <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span className="text-xs font-bold font-kufi whitespace-nowrap">مواقيت الصلاة 🌿</span>
-          </div>
-          <div className="w-full sm:w-1/3 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-200 shadow-xs">
-            <Bot className="w-4 h-4 text-teal-400 shrink-0" />
-            <span className="text-xs font-bold font-kufi whitespace-nowrap">الذكاء الإسلامي ✨</span>
-          </div>
+          <button 
+            onClick={() => handleEnterClick('quran')}
+            className="w-full sm:w-1/3 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-500/30 hover:border-amber-400/50 text-emerald-200 hover:text-amber-300 shadow-xs transition-all active:scale-95 cursor-pointer group"
+          >
+            <BookOpen className="w-4 h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold font-kufi whitespace-nowrap">{isEn ? "Holy Quran 📖" : "القرآن والتفسير 📖"}</span>
+          </button>
+          <button 
+            onClick={() => handleEnterClick('prayer-times')}
+            className="w-full sm:w-1/3 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-500/30 hover:border-amber-400/50 text-emerald-200 hover:text-amber-300 shadow-xs transition-all active:scale-95 cursor-pointer group"
+          >
+            <Clock className="w-4 h-4 text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold font-kufi whitespace-nowrap">{isEn ? "Prayer Times 🌿" : "مواقيت الصلاة 🌿"}</span>
+          </button>
+          <button 
+            onClick={() => handleEnterClick('ai-assistant')}
+            className="w-full sm:w-1/3 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-500/30 hover:border-amber-400/50 text-emerald-200 hover:text-amber-300 shadow-xs transition-all active:scale-95 cursor-pointer group"
+          >
+            <Bot className="w-4 h-4 text-teal-400 shrink-0 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold font-kufi whitespace-nowrap">{isEn ? "AI Assistant ✨" : "الذكاء الإسلامي ✨"}</span>
+          </button>
         </div>
 
         {/* Bottom: Big Gradient Entrance Button */}
         <div className="w-full space-y-2.5 pt-2">
           <button
             id="splash-enter-app-btn"
-            onClick={handleEnterClick}
+            onClick={() => handleEnterClick()}
             className="w-full py-4 px-6 bg-gradient-to-r from-emerald-600 via-amber-500 to-orange-500 hover:from-emerald-500 hover:via-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 group font-kufi"
           >
             <span>{isEn ? "Enter Application 🕌 →" : "الدخول إلى التطبيق 🕌 ←"}</span>

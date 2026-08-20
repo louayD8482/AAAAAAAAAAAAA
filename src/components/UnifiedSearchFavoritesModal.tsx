@@ -111,6 +111,12 @@ export default function UnifiedSearchFavoritesModal({
     return list;
   }, [favoriteAzkarIds]);
 
+  const removeAyahFavorite = (key: string) => {
+    const updated = favoriteAyahKeys.filter((x: string) => x !== key);
+    localStorage.setItem('noor_quran_fav_ayahs', JSON.stringify(updated));
+    setActiveTab('favorites');
+  };
+
   const handleCopy = (id: string, text: string) => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
@@ -319,34 +325,89 @@ export default function UnifiedSearchFavoritesModal({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {favoriteAzkarItems.map((item, idx) => (
-                    <div 
-                      key={`fav-az-${item.id}`}
-                      className="p-4 bg-[#091B1F] border border-amber-400/20 rounded-2xl space-y-2"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-bold text-amber-400">
-                        <span>📂 {item.catName}</span>
-                        <button
-                          onClick={() => removeAzkarFavorite(item.id)}
-                          className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer"
-                          title="حذف من المفضلة"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                <div className="space-y-4">
+                  {/* Saved Quran Ayahs */}
+                  {favoriteAyahKeys.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-xs font-black text-amber-300 flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5" />
+                        <span>{isEn ? `Saved Quran Verses (${favoriteAyahKeys.length})` : `آيات القرآن المحفوظة (${favoriteAyahKeys.length})`}</span>
                       </div>
-                      <p className="text-xs sm:text-sm text-slate-100 font-serif leading-relaxed select-text">{item.text}</p>
-                      <div className="flex justify-end gap-2 pt-1 border-t border-emerald-500/10">
-                        <button
-                          onClick={() => handleCopy(`fav-${item.id}`, item.text)}
-                          className="px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-[11px] text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
-                        >
-                          {copiedId === `fav-${item.id}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                          <span>{copiedId === `fav-${item.id}` ? 'تم النسخ' : 'نسخ'}</span>
-                        </button>
-                      </div>
+                      {favoriteAyahKeys.map((key: string) => {
+                        const [sNum, aNum] = key.split(':');
+                        const sMeta = quranMetadata.find(m => m.number === Number(sNum));
+                        return (
+                          <div 
+                            key={`fav-ayah-${key}`}
+                            className="p-4 bg-[#091B1F] border border-amber-400/20 rounded-2xl space-y-2"
+                          >
+                            <div className="flex items-center justify-between text-[11px] font-bold text-amber-400">
+                              <span>📖 سورة {sMeta ? sMeta.name : sNum} - الآية ({aNum})</span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    onNavigateSection('quran');
+                                    onClose();
+                                  }}
+                                  className="text-emerald-400 hover:text-emerald-300 text-[10px] bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/20 cursor-pointer flex items-center gap-1"
+                                >
+                                  <span>فتح السورة</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </button>
+                                <button
+                                  onClick={() => removeAyahFavorite(key)}
+                                  className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer"
+                                  title="حذف من المفضلة"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-xs text-slate-300 font-sans">
+                              {isEn ? `Saved verse from Surah ${sMeta?.englishName || sNum} (Ayah ${aNum}).` : `آية كريمة محفوظة من سورة ${sMeta?.name || sNum} برقم (${aNum}).`}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  )}
+
+                  {/* Saved Azkar Items */}
+                  {favoriteAzkarItems.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>{isEn ? `Saved Adhkar (${favoriteAzkarItems.length})` : `الأذكار المحفوظة (${favoriteAzkarItems.length})`}</span>
+                      </div>
+                      {favoriteAzkarItems.map((item) => (
+                        <div 
+                          key={`fav-az-${item.id}`}
+                          className="p-4 bg-[#091B1F] border border-amber-400/20 rounded-2xl space-y-2"
+                        >
+                          <div className="flex items-center justify-between text-[11px] font-bold text-amber-400">
+                            <span>📂 {item.catName}</span>
+                            <button
+                              onClick={() => removeAzkarFavorite(item.id)}
+                              className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer"
+                              title="حذف من المفضلة"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <p className="text-xs sm:text-sm text-slate-100 font-serif leading-relaxed select-text">{item.text}</p>
+                          <div className="flex justify-end gap-2 pt-1 border-t border-emerald-500/10">
+                            <button
+                              onClick={() => handleCopy(`fav-${item.id}`, item.text)}
+                              className="px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-[11px] text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
+                            >
+                              {copiedId === `fav-${item.id}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                              <span>{copiedId === `fav-${item.id}` ? 'تم النسخ' : 'نسخ'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -29,6 +29,9 @@ import { AppSettings } from '../types';
 import { PRAYER_COUNTRIES } from '../data/prayerCities';
 import { downloadProjectZip } from '../utils/zipExporter';
 import { ADHAN_VOICES } from '../utils/nativeNotifications';
+import { playAdhanAudio, stopAdhanAudio, playPrePrayerChime, isAdhanPlaying } from '../utils/adhanPlayer';
+import { PrivacyPolicyModal } from './PrivacyPolicyModal';
+import { Shield } from 'lucide-react';
 // @ts-ignore
 import defaultLogo from '../assets/images/app_logo_1784266160080.jpg';
 // @ts-ignore
@@ -56,53 +59,42 @@ export default function SettingsModal({
 
   const [testNotificationSent, setTestNotificationSent] = useState(false);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const [isExportingZip, setIsExportingZip] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ percent: number; status: string }>({ percent: 0, status: '' });
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
-  const playVoicePreview = (voiceId: string) => {
+  const handleDownloadZip = async () => {
+    try {
+      setIsExportingZip(true);
+      setExportProgress({ percent: 10, status: 'جاري قراءة وتجهيز كافة ملفات المشروع والمكتبات...' });
+      await downloadProjectZip((pct, file) => {
+        setExportProgress({ percent: pct, status: file });
+      });
+      setExportProgress({ percent: 100, status: 'تم تحميل ملف ZIP بنجاح!' });
+      setTimeout(() => {
+        setIsExportingZip(false);
+      }, 2500);
+    } catch (e) {
+      console.error('Export failed:', e);
+      setIsExportingZip(false);
+    }
+  };
+
+  const playVoicePreview = async (voiceId: string) => {
     if (playingVoiceId === voiceId) {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
+      stopAdhanAudio();
       setPlayingVoiceId(null);
       return;
     }
 
     try {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AudioCtx();
-      audioContextRef.current = ctx;
       setPlayingVoiceId(voiceId);
-
-      // Distinct melodic adhan tones for different muezzins
-      const freqs = voiceId === 'makkah' 
-        ? [440, 554.37, 659.25, 880] // A major Hijaz
-        : voiceId === 'madinah'
-        ? [392, 493.88, 587.33, 783.99] // G major Rast
-        : voiceId === 'alaqsa'
-        ? [349.23, 440, 523.25, 698.46] // F Bayati
-        : [523.25, 659.25, 783.99, 1046.5]; // C Saba
-
-      freqs.forEach((freq, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.45);
-        gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.45);
-        gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + idx * 0.45 + 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.45 + 0.42);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + idx * 0.45);
-        osc.stop(ctx.currentTime + idx * 0.45 + 0.45);
-      });
-
-      setTimeout(() => {
-        setPlayingVoiceId((prev) => (prev === voiceId ? null : prev));
-      }, freqs.length * 450 + 200);
+      const audio = await playAdhanAudio(voiceId, 1.0);
+      if (audio) {
+        audio.onended = () => {
+          setPlayingVoiceId(null);
+        };
+      }
     } catch (e) {
       setPlayingVoiceId(null);
     }
@@ -112,6 +104,9 @@ export default function SettingsModal({
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotificationPermission(Notification.permission);
     }
+    return () => {
+      stopAdhanAudio();
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -128,9 +123,11 @@ export default function SettingsModal({
             azkarReminder: true,
             visualAdhanAlert: true
           });
+          // Play pre-prayer soft chime on successful enablement
+          playPrePrayerChime();
           // Show welcome test notification
           new Notification('نور الإسلام | تم تفعيل الإشعارات بنجاح', {
-            body: 'أهلاً بك! تم تفعيل إشعارات مواقيت الصلاة والأذكار اليومية بنجاح على جهازك.',
+            body: 'أهلاً بك! تم تفعيل إشعارات مواقيت الصلاة والأذكار اليومية بنجاح على جهازك مع صوت الأذان المختار.',
             icon: settings.appLogoUrl || defaultLogo,
             dir: 'rtl'
           });
@@ -141,26 +138,16 @@ export default function SettingsModal({
     }
   };
 
-  const handleTestNotification = () => {
+  const handleTestNotification = async () => {
     setTestNotificationSent(true);
-    setTimeout(() => setTestNotificationSent(false), 3000);
+    setTimeout(() => setTestNotificationSent(false), 3500);
 
-    // Audio chime test
-    if (settings.soundEnabled) {
-      try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // A5
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.8);
-      } catch (e) {}
+    // Play real Adhan audio for test
+    if (settings.soundEnabled || settings.adhanReminder) {
+      playPrePrayerChime();
+      setTimeout(() => {
+        playAdhanAudio(settings.selectedAdhanVoice || 'makkah', 1.0);
+      }, 1200);
     }
 
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -293,17 +280,48 @@ export default function SettingsModal({
                   <span>{isEn ? "Follow on Snapchat" : "تابعني على سناب شات"}</span>
                 </a>
 
+                {/* Privacy Policy Button */}
+                <button
+                  id="open-privacy-policy-btn"
+                  type="button"
+                  onClick={() => setIsPrivacyOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-black/40 hover:bg-white dark:hover:bg-black/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs rounded-full border border-emerald-500/30 shadow-xs hover:shadow-md transform hover:-translate-y-0.5 transition-all cursor-pointer"
+                >
+                  <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>{isEn ? "Privacy Policy" : "سياسة الخصوصية"}</span>
+                </button>
+
                 {/* Download Source Code ZIP */}
-                <a
+                <button
                   id="download-source-zip-btn"
-                  href="/api/download-zip"
-                  download="Noor_Al_Islam_SourceCode.zip"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-full shadow-xs hover:shadow-md transform hover:-translate-y-0.5 transition-all"
+                  type="button"
+                  onClick={handleDownloadZip}
+                  disabled={isExportingZip}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs rounded-full shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>{isEn ? "Download Source (ZIP)" : "تحميل كود المشروع (ZIP)"}</span>
-                </a>
+                  <span>
+                    {isExportingZip 
+                      ? (isEn ? `Packaging (${exportProgress.percent}%)...` : `جاري التجهيز (${exportProgress.percent}%)...`)
+                      : (isEn ? "Export Complete Project (ZIP)" : "تصدير التطبيق كاملاً (ZIP)")}
+                  </span>
+                </button>
               </div>
+
+              {/* Live ZIP export progress */}
+              {isExportingZip && (
+                <div className="w-full max-w-xs space-y-1.5 pt-2">
+                  <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-amber-400 transition-all duration-300 rounded-full"
+                      style={{ width: `${exportProgress.percent}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-center font-mono text-emerald-600 dark:text-emerald-400 truncate">
+                    {exportProgress.status}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -837,8 +855,9 @@ export default function SettingsModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                 <button
                   id="export-source-btn"
-                  onClick={downloadProjectZip}
-                  className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  onClick={() => handleDownloadZip()}
+                  disabled={isExportingZip}
+                  className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                 >
                   <Download className="w-4 h-4" />
                   <span>{isEn ? "Download iOS Package (ZIP)" : "تحميل حزمة الآيفون (ZIP)"}</span>
@@ -865,6 +884,13 @@ export default function SettingsModal({
           <span className="font-bold text-emerald-800 dark:text-emerald-300">{settings.developerName || "لؤي بن حسين"}</span>
         </div>
       </div>
+
+      {/* Privacy Policy Modal */}
+      <PrivacyPolicyModal
+        isOpen={isPrivacyOpen}
+        onClose={() => setIsPrivacyOpen(false)}
+        isEn={isEn}
+      />
     </div>
   );
 }

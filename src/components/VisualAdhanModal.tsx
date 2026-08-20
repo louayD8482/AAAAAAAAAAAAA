@@ -7,6 +7,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Bell, Volume2, VolumeX, X, Heart, Shield } from 'lucide-react';
 import { formatTime12 } from '../utils/formatTime';
+import { playAdhanAudio, stopAdhanAudio, isAdhanPlaying } from '../utils/adhanPlayer';
 
 interface VisualAdhanModalProps {
   isOpen: boolean;
@@ -34,115 +35,40 @@ export default function VisualAdhanModal({
   isEn = false
 }: VisualAdhanModalProps) {
   const [isPlaying, setIsPlaying] = useState<boolean>(soundEnabled);
-  const [muadhin, setMuadhin] = useState<'makkah' | 'madinah'>('makkah');
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const activeNodesRef = useRef<any[]>([]);
-
-  const ADHAN_SOURCES = {
-    makkah: 'https://cdn.aladhan.com/audio/adhans/adhan_makkah.mp3',
-    madinah: 'https://cdn.aladhan.com/audio/adhans/adhan_madinah.mp3'
-  };
-
-  // Function to play authentic real Adhan audio
-  const playRealAdhan = () => {
-    try {
-      if (!audioRef.current) {
-        audioRef.current = new Audio();
-      }
-      const audio = audioRef.current;
-      audio.src = ADHAN_SOURCES[muadhin];
-      audio.volume = 1.0;
-      audio.play().then(() => {
-        setIsPlaying(true);
-      }).catch((err) => {
-        console.warn('Real Adhan mp3 play blocked, playing synthesized serene chime fallback:', err);
-        playSereneChime();
-      });
-    } catch {
-      playSereneChime();
-    }
-  };
-
-  const stopAdhanAudio = () => {
-    if (audioRef.current) {
-      try {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      } catch {}
-    }
-    stopChime();
-    setIsPlaying(false);
-  };
-
-  // Function to synthesize beautiful serene spiritual rising chords fallback
-  const playSereneChime = () => {
-    try {
-      stopChime();
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const audioCtx = new AudioCtx();
-      audioCtxRef.current = audioCtx;
-      activeNodesRef.current = [];
-
-      const playTone = (freq: number, startTime: number, duration: number, volume = 0.05) => {
-        const osc = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
-        gainNode.gain.setValueAtTime(0, audioCtx.currentTime + startTime);
-        gainNode.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + startTime + 0.15);
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + startTime + duration);
-        osc.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        osc.start(audioCtx.currentTime + startTime);
-        osc.stop(audioCtx.currentTime + startTime + duration);
-        activeNodesRef.current.push(osc);
-      };
-
-      playTone(349.23, 0.0, 3.5, 0.05);
-      playTone(440.00, 0.4, 3.5, 0.05);
-      playTone(523.25, 0.8, 4.0, 0.05);
-      playTone(698.46, 1.2, 4.5, 0.04);
-      playTone(880.00, 2.0, 3.0, 0.02);
-      setIsPlaying(true);
-    } catch (e) {
-      console.log('Chime playback failed:', e);
-    }
-  };
-
-  const stopChime = () => {
-    try {
-      activeNodesRef.current.forEach(node => {
-        try { node.stop(); } catch(e){}
-      });
-      activeNodesRef.current = [];
-      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-        audioCtxRef.current.close();
-      }
-    } catch (e) {
-      console.log(e);
-    }
-  };
 
   // Play immediately if sound is enabled on mount
   useEffect(() => {
-    if (isOpen) {
-      if (soundEnabled) {
-        const timer = setTimeout(() => {
-          playRealAdhan();
-        }, 200);
-        return () => clearTimeout(timer);
-      }
+    let isCancelled = false;
+    if (isOpen && soundEnabled) {
+      const timer = setTimeout(async () => {
+        if (!isCancelled) {
+          const audio = await playAdhanAudio('makkah', 1.0);
+          if (audio) {
+            setIsPlaying(true);
+            audio.onended = () => setIsPlaying(false);
+          }
+        }
+      }, 300);
+      return () => {
+        isCancelled = true;
+        clearTimeout(timer);
+      };
     }
-    return () => stopAdhanAudio();
-  }, [isOpen, muadhin]);
+    return () => {
+      stopAdhanAudio();
+    };
+  }, [isOpen, soundEnabled]);
 
-  const handleToggleSound = () => {
+  const handleToggleSound = async () => {
     if (isPlaying) {
       stopAdhanAudio();
+      setIsPlaying(false);
     } else {
-      playRealAdhan();
+      const audio = await playAdhanAudio('makkah', 1.0);
+      if (audio) {
+        setIsPlaying(true);
+        audio.onended = () => setIsPlaying(false);
+      }
     }
   };
 

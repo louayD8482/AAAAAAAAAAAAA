@@ -201,6 +201,28 @@ export default function TasbihSection({ soundEnabled = true, isEn = false }: Tas
     localStorage.setItem('tasbih_dhikr_list', JSON.stringify(dhikrList));
   }, [count, completedRounds, dailyHistory, dhikrList]);
 
+  // Spacebar and ArrowUp keyboard support for easy counting on desktop/laptops
+  useEffect(() => {
+    if (activeTab !== 'tasbih' || isDhikrModalOpen || isAddCustomOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // If user is focused on an input or textarea, don't trigger tasbih tap
+      const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (targetTag === 'input' || targetTag === 'textarea') return;
+
+      if (e.code === 'Space' || e.key === ' ' || e.key === 'ArrowUp' || e.key === 'Enter') {
+        e.preventDefault();
+        handleTasbihTap();
+      } else if (e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        handleReset();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, isDhikrModalOpen, isAddCustomOpen, count, target, todayKey, soundEnabled]);
+
   // Sound effects
   const playClickSound = () => {
     if (!soundEnabled) return;
