@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { azkarData } from '../data/azkar';
 import { ZekrItem } from '../types';
+import { safeStorage } from '../utils/safeStorage';
 
 export interface AzkarReciter {
   id: string;
@@ -158,12 +159,12 @@ interface AzkarSectionProps {
 export default function AzkarSection({ soundEnabled, isEn = false }: AzkarSectionProps) {
   // Category selection
   const [selectedCatId, setSelectedCatId] = useState<string>(() => {
-    return localStorage.getItem('noor_azkar_selected_cat') || 'morning';
+    return safeStorage.getItem('noor_azkar_selected_cat') || 'morning';
   });
 
   // Chosen Sheikh Reciter
   const [selectedReciterId, setSelectedReciterId] = useState<string>(() => {
-    return localStorage.getItem('noor_azkar_reciter_id') || 'alafasy';
+    return safeStorage.getItem('noor_azkar_reciter_id') || 'alafasy';
   });
 
   // Search query
@@ -178,12 +179,12 @@ export default function AzkarSection({ soundEnabled, isEn = false }: AzkarSectio
 
   // Font Size Scaling for readability
   const [fontSizeLevel, setFontSizeLevel] = useState<'normal' | 'large' | 'xlarge'>(() => {
-    return (localStorage.getItem('noor_azkar_font_size') as any) || 'normal';
+    return (safeStorage.getItem('noor_azkar_font_size') as any) || 'normal';
   });
 
   // Counter states: { [zekrId]: currentCompletedCount }
   const [countsState, setCountsState] = useState<{ [key: number]: number }>(() => {
-    const saved = localStorage.getItem('noor_azkar_counts_today');
+    const saved = safeStorage.getItem('noor_azkar_counts_today');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -196,12 +197,12 @@ export default function AzkarSection({ soundEnabled, isEn = false }: AzkarSectio
 
   // Auto advance toggle
   const [autoAdvance, setAutoAdvance] = useState<boolean>(() => {
-    return localStorage.getItem('noor_azkar_auto_advance') === 'true';
+    return safeStorage.getItem('noor_azkar_auto_advance') === 'true';
   });
 
   // Favorites
   const [favorites, setFavorites] = useState<number[]>(() => {
-    const stored = localStorage.getItem('noor_favorite_azkar_ids');
+    const stored = safeStorage.getItem('noor_favorite_azkar_ids');
     if (stored) {
       try {
         return JSON.parse(stored);
@@ -230,30 +231,30 @@ export default function AzkarSection({ soundEnabled, isEn = false }: AzkarSectio
     return SHEIKH_RECITERS.find(r => r.id === selectedReciterId) || SHEIKH_RECITERS[0];
   }, [selectedReciterId]);
 
-  // Sync to localStorage
+  // Sync to safeStorage
   useEffect(() => {
     const today = new Date().toISOString().substring(0, 10);
-    localStorage.setItem('noor_azkar_counts_today', JSON.stringify({ date: today, counts: countsState }));
+    safeStorage.setItem('noor_azkar_counts_today', JSON.stringify({ date: today, counts: countsState }));
   }, [countsState]);
 
   useEffect(() => {
-    localStorage.setItem('noor_azkar_selected_cat', selectedCatId);
+    safeStorage.setItem('noor_azkar_selected_cat', selectedCatId);
   }, [selectedCatId]);
 
   useEffect(() => {
-    localStorage.setItem('noor_azkar_reciter_id', selectedReciterId);
+    safeStorage.setItem('noor_azkar_reciter_id', selectedReciterId);
   }, [selectedReciterId]);
 
   useEffect(() => {
-    localStorage.setItem('noor_azkar_auto_advance', autoAdvance.toString());
+    safeStorage.setItem('noor_azkar_auto_advance', autoAdvance.toString());
   }, [autoAdvance]);
 
   useEffect(() => {
-    localStorage.setItem('noor_azkar_font_size', fontSizeLevel);
+    safeStorage.setItem('noor_azkar_font_size', fontSizeLevel);
   }, [fontSizeLevel]);
 
   useEffect(() => {
-    localStorage.setItem('noor_favorite_azkar_ids', JSON.stringify(favorites));
+    safeStorage.setItem('noor_favorite_azkar_ids', JSON.stringify(favorites));
   }, [favorites]);
 
   // Stop audio on unmount or category change

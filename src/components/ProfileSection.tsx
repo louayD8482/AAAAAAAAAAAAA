@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { AppSettings } from '../types';
 import { ISLAMIC_AVATARS } from '../assets/avatars';
+import { safeStorage } from '../utils/safeStorage';
 
 interface ProfileSectionProps {
   settings: AppSettings;
@@ -32,12 +33,12 @@ interface ProfileSectionProps {
 export default function ProfileSection({ settings, isEn = false, onNavigateSection }: ProfileSectionProps) {
   // Load statistics from localStorage
   const [totalTasbih, setTotalTasbih] = useState<number>(() => {
-    return parseInt(localStorage.getItem('tasbih_total_all_time') || '0', 10);
+    return parseInt(safeStorage.getItem('tasbih_total_all_time') || '0', 10);
   });
 
   const [favoriteAzkarCount, setFavoriteAzkarCount] = useState<number>(() => {
     try {
-      const favs = JSON.parse(localStorage.getItem('azkar_favorites') || '[]');
+      const favs = JSON.parse(safeStorage.getItem('azkar_favorites') || '[]');
       return Array.isArray(favs) ? favs.length : 0;
     } catch {
       return 0;
@@ -46,7 +47,7 @@ export default function ProfileSection({ settings, isEn = false, onNavigateSecti
 
   const [khatmaPagesRead, setKhatmaPagesRead] = useState<number>(() => {
     try {
-      const plan = JSON.parse(localStorage.getItem('noor_khatma_plan') || '{}');
+      const plan = JSON.parse(safeStorage.getItem('noor_khatma_plan') || '{}');
       return plan.pagesRead || 0;
     } catch {
       return 0;
@@ -55,7 +56,7 @@ export default function ProfileSection({ settings, isEn = false, onNavigateSecti
 
   const [fastingDays, setFastingDays] = useState<string[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('noor_fasting_days') || '[]');
+      return JSON.parse(safeStorage.getItem('noor_fasting_days') || '[]');
     } catch {
       return [];
     }
@@ -63,7 +64,7 @@ export default function ProfileSection({ settings, isEn = false, onNavigateSecti
 
   const [weeklyActivity, setWeeklyActivity] = useState<number[]>(() => {
     try {
-      const logs = JSON.parse(localStorage.getItem('tasbih_daily_logs') || '{}');
+      const logs = JSON.parse(safeStorage.getItem('tasbih_daily_logs') || '{}');
       const days = [6, 5, 4, 3, 2, 1, 0];
       return days.map(d => {
         const date = new Date();
@@ -81,15 +82,15 @@ export default function ProfileSection({ settings, isEn = false, onNavigateSecti
 
   // Sync state whenever mounted
   useEffect(() => {
-    const total = parseInt(localStorage.getItem('tasbih_total_all_time') || '0', 10);
+    const total = parseInt(safeStorage.getItem('tasbih_total_all_time') || '0', 10);
     setTotalTasbih(total);
   }, []);
 
   const khatmaPercent = Math.min(100, Math.round((khatmaPagesRead / 604) * 100));
 
   const handleResetStats = () => {
-    localStorage.setItem('tasbih_total_all_time', '0');
-    localStorage.setItem('tasbih_daily_logs', JSON.stringify({}));
+    safeStorage.setItem('tasbih_total_all_time', '0');
+    safeStorage.setItem('tasbih_daily_logs', JSON.stringify({}));
     setTotalTasbih(0);
     setWeeklyActivity([0, 0, 0, 0, 0, 0, 0]);
     setShowResetConfirm(false);
@@ -104,7 +105,7 @@ export default function ProfileSection({ settings, isEn = false, onNavigateSecti
       updated.push(todayStr);
     }
     setFastingDays(updated);
-    localStorage.setItem('noor_fasting_days', JSON.stringify(updated));
+    safeStorage.setItem('noor_fasting_days', JSON.stringify(updated));
   };
 
   const isFastingToday = fastingDays.includes(new Date().toISOString().split('T')[0]);

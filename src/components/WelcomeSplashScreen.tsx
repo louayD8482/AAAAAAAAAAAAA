@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { AppSettings } from '../types';
 import { ISLAMIC_AVATARS } from '../assets/avatars';
+import { safeStorage } from '../utils/safeStorage';
 
 interface WelcomeSplashScreenProps {
   settings: AppSettings;
@@ -26,7 +27,7 @@ export default function WelcomeSplashScreen({ settings, isEn = false, onEnter }:
 
   const handleEnterClick = (sectionId?: string) => {
     if (dontShowAgain) {
-      localStorage.setItem('noor_hide_welcome_splash', 'true');
+      safeStorage.setItem('noor_hide_welcome_splash', 'true');
     }
     onEnter(sectionId);
   };
@@ -38,7 +39,7 @@ export default function WelcomeSplashScreen({ settings, isEn = false, onEnter }:
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.35 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#04090A] text-white p-4 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#04090A] text-white p-4 sm:p-6 overflow-y-auto"
       dir={isEn ? "ltr" : "rtl"}
     >
       {/* Background Ambient Glows & Dot Pattern */}

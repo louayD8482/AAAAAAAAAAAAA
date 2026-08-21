@@ -22,6 +22,7 @@ import {
   VolumeX,
   Target
 } from 'lucide-react';
+import { safeStorage } from '../utils/safeStorage';
 
 interface DhikrItem {
   id: string;
@@ -126,7 +127,7 @@ export default function TasbihSection({ soundEnabled = true, isEn = false }: Tas
   
   // Dhikr Selection
   const [dhikrList, setDhikrList] = useState<DhikrItem[]>(() => {
-    const saved = localStorage.getItem('tasbih_dhikr_list');
+    const saved = safeStorage.getItem('tasbih_dhikr_list');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -142,7 +143,7 @@ export default function TasbihSection({ soundEnabled = true, isEn = false }: Tas
   });
 
   const [count, setCount] = useState<number>(() => {
-    return Number(localStorage.getItem('tasbih_current_count') || '0');
+    return Number(safeStorage.getItem('tasbih_current_count') || '0');
   });
 
   const [target, setTarget] = useState<number>(() => {
@@ -150,7 +151,7 @@ export default function TasbihSection({ soundEnabled = true, isEn = false }: Tas
   });
 
   const [completedRounds, setCompletedRounds] = useState<number>(() => {
-    return Number(localStorage.getItem('tasbih_completed_rounds') || '0');
+    return Number(safeStorage.getItem('tasbih_completed_rounds') || '0');
   });
 
   const [isDhikrModalOpen, setIsDhikrModalOpen] = useState<boolean>(false);
@@ -164,7 +165,7 @@ export default function TasbihSection({ soundEnabled = true, isEn = false }: Tas
 
   // Daily History State
   const [dailyHistory, setDailyHistory] = useState<DailyHistory>(() => {
-    const stored = localStorage.getItem('tasbih_daily_history');
+    const stored = safeStorage.getItem('tasbih_daily_history');
     if (stored) {
       try {
         return JSON.parse(stored);
@@ -195,10 +196,10 @@ export default function TasbihSection({ soundEnabled = true, isEn = false }: Tas
 
   // Save to LocalStorage
   useEffect(() => {
-    localStorage.setItem('tasbih_current_count', count.toString());
-    localStorage.setItem('tasbih_completed_rounds', completedRounds.toString());
-    localStorage.setItem('tasbih_daily_history', JSON.stringify(dailyHistory));
-    localStorage.setItem('tasbih_dhikr_list', JSON.stringify(dhikrList));
+    safeStorage.setItem('tasbih_current_count', count.toString());
+    safeStorage.setItem('tasbih_completed_rounds', completedRounds.toString());
+    safeStorage.setItem('tasbih_daily_history', JSON.stringify(dailyHistory));
+    safeStorage.setItem('tasbih_dhikr_list', JSON.stringify(dhikrList));
   }, [count, completedRounds, dailyHistory, dhikrList]);
 
   // Spacebar and ArrowUp keyboard support for easy counting on desktop/laptops

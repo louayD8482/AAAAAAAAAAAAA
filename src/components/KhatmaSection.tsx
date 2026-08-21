@@ -18,6 +18,7 @@ import {
   Trash2, 
   Target 
 } from 'lucide-react';
+import { safeStorage } from '../utils/safeStorage';
 
 interface HistoryLog {
   date: string;
@@ -34,21 +35,21 @@ export default function KhatmaSection({ isEn = false }: KhatmaSectionProps) {
 
   // 1. Core States
   const [currentPage, setCurrentPage] = useState<number>(() => {
-    return Number(localStorage.getItem('khatma_current_page') || '0');
+    return Number(safeStorage.getItem('khatma_current_page') || '0');
   });
 
   const [inputPage, setInputPage] = useState<string>('');
 
   const [targetPagesPerDay, setTargetPagesPerDay] = useState<number>(() => {
-    return Number(localStorage.getItem('khatma_target_pages_per_day') || '20');
+    return Number(safeStorage.getItem('khatma_target_pages_per_day') || '20');
   });
 
   const [targetDays, setTargetDays] = useState<number>(() => {
-    return Number(localStorage.getItem('khatma_target_days') || '30');
+    return Number(safeStorage.getItem('khatma_target_days') || '30');
   });
 
   const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>(() => {
-    const stored = localStorage.getItem('khatma_history');
+    const stored = safeStorage.getItem('khatma_history');
     if (!stored) return [];
     try {
       const parsed = JSON.parse(stored);
@@ -76,19 +77,19 @@ export default function KhatmaSection({ isEn = false }: KhatmaSectionProps) {
 
   // 2. Persistence Syncing
   useEffect(() => {
-    localStorage.setItem('khatma_current_page', currentPage.toString());
+    safeStorage.setItem('khatma_current_page', currentPage.toString());
   }, [currentPage]);
 
   useEffect(() => {
-    localStorage.setItem('khatma_history', JSON.stringify(historyLogs));
+    safeStorage.setItem('khatma_history', JSON.stringify(historyLogs));
   }, [historyLogs]);
 
   useEffect(() => {
-    localStorage.setItem('khatma_target_pages_per_day', targetPagesPerDay.toString());
+    safeStorage.setItem('khatma_target_pages_per_day', targetPagesPerDay.toString());
   }, [targetPagesPerDay]);
 
   useEffect(() => {
-    localStorage.setItem('khatma_target_days', targetDays.toString());
+    safeStorage.setItem('khatma_target_days', targetDays.toString());
   }, [targetDays]);
 
   // 3. Sync Target Configuration Handlers

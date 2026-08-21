@@ -287,12 +287,13 @@ export const scheduleAllNativeNotifications = async (
               smallIcon: 'ic_stat_icon',
               iconColor: '#10b981',
               actionTypeId: 'PRAYER_ALERT_ACTIONS',
+              category: 'PRAYER_ALERT_CATEGORY',
               extra: { prayer: prayer.name, type: 'pre-prayer' }
             });
           }
         }
 
-        // B. Exact Adhan Moment Alert with selected voice & Rich Actions
+        // B. Exact Adhan Moment Alert with selected voice & Rich Actions + iOS Critical Alert category
         if (settings.adhanReminder) {
           const exactTime = new Date(targetDate);
           exactTime.setHours(pHour, pMin, 0, 0);
@@ -304,11 +305,14 @@ export const scheduleAllNativeNotifications = async (
               title: adhanData.title,
               body: adhanData.body,
               schedule: { at: exactTime },
-              sound: adhanSoundFile, // Dynamic chosen muezzin adhan audio
+              sound: adhanSoundFile, // Dynamic chosen muezzin adhan audio (MP3/WAV)
               channelId: 'adhan_channel',
               smallIcon: 'ic_stat_icon',
               iconColor: '#10b981',
               actionTypeId: 'ADHAN_ACTIONS',
+              category: 'CRITICAL_ADHAN_CATEGORY', // iOS Critical Alert custom category
+              critical: true, // Native iOS & Android critical notification flag
+              volume: 1.0,
               extra: { prayer: prayer.name, type: 'adhan', voice: settings.selectedAdhanVoice }
             });
           }
@@ -330,6 +334,7 @@ export const scheduleAllNativeNotifications = async (
               smallIcon: 'ic_stat_icon',
               iconColor: '#10b981',
               actionTypeId: 'PRAYER_ALERT_ACTIONS',
+              category: 'PRAYER_ALERT_CATEGORY',
               extra: { prayer: prayer.name, type: 'iqama' }
             });
           }

@@ -102,6 +102,46 @@ export const QURAN_RECITERS: QuranReciter[] = [
     fallbackUrl: 'https://everyayah.com/data/Hudhaify_128kbps/'
   },
   {
+    id: 'budair',
+    name: 'صلاح بن محمد البدير',
+    nameEn: 'Salah Al-Budair',
+    country: 'السعودية (إمام المسجد النبوي)',
+    tag: 'مسجد نبوي',
+    riwayah: 'حفص عن عاصم',
+    url: 'https://server6.mp3quran.net/s_bud/',
+    fallbackUrl: 'https://everyayah.com/data/Salah_Al_Budair_128kbps/'
+  },
+  {
+    id: 'ahmad_hudhaify',
+    name: 'أحمد بن علي الحذيفي',
+    nameEn: 'Ahmad Al-Hudhaify',
+    country: 'السعودية (إمام المسجد النبوي)',
+    tag: 'مسجد نبوي',
+    riwayah: 'حفص عن عاصم',
+    url: 'https://server14.mp3quran.net/a_hthfi/',
+    fallbackUrl: 'https://backup.mp3quran.net/a_hthfi/'
+  },
+  {
+    id: 'muhanna',
+    name: 'خالد بن سليمان المهنا',
+    nameEn: 'Khalid Al-Muhanna',
+    country: 'السعودية (إمام المسجد النبوي)',
+    tag: 'مسجد نبوي',
+    riwayah: 'حفص عن عاصم',
+    url: 'https://server11.mp3quran.net/mohna/',
+    fallbackUrl: 'https://backup.mp3quran.net/mohna/'
+  },
+  {
+    id: 'baijan',
+    name: 'عبد الله بن عبد الرحمن البعيجان',
+    nameEn: 'Abdullah Al-Baijan',
+    country: 'السعودية (إمام المسجد النبوي)',
+    tag: 'مسجد نبوي',
+    riwayah: 'حفص عن عاصم',
+    url: 'https://server16.mp3quran.net/baijan/',
+    fallbackUrl: 'https://backup.mp3quran.net/baijan/'
+  },
+  {
     id: 'ajamy',
     name: 'أحمد بن علي العجمي',
     nameEn: 'Ahmed Al-Ajmy',

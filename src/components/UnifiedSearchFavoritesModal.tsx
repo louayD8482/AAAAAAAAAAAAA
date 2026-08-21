@@ -23,6 +23,7 @@ import {
 import { quranMetadata } from '../data/quran_metadata';
 import { azkarData } from '../data/azkar';
 import { hadithsData } from '../data/hadith';
+import { safeStorage } from '../utils/safeStorage';
 
 interface UnifiedSearchFavoritesModalProps {
   isOpen: boolean;
@@ -41,10 +42,10 @@ export default function UnifiedSearchFavoritesModal({
   const [query, setQuery] = useState<string>('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Favorites state from localStorage
+  // Favorites state from safeStorage
   const favoriteAzkarIds = useMemo(() => {
     try {
-      const stored = localStorage.getItem('noor_favorite_azkar_ids');
+      const stored = safeStorage.getItem('noor_favorite_azkar_ids');
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -53,7 +54,7 @@ export default function UnifiedSearchFavoritesModal({
 
   const favoriteAyahKeys = useMemo(() => {
     try {
-      const stored = localStorage.getItem('noor_quran_fav_ayahs');
+      const stored = safeStorage.getItem('noor_quran_fav_ayahs');
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -113,7 +114,7 @@ export default function UnifiedSearchFavoritesModal({
 
   const removeAyahFavorite = (key: string) => {
     const updated = favoriteAyahKeys.filter((x: string) => x !== key);
-    localStorage.setItem('noor_quran_fav_ayahs', JSON.stringify(updated));
+    safeStorage.setItem('noor_quran_fav_ayahs', JSON.stringify(updated));
     setActiveTab('favorites');
   };
 
@@ -127,14 +128,14 @@ export default function UnifiedSearchFavoritesModal({
 
   const removeAzkarFavorite = (id: number) => {
     const updated = favoriteAzkarIds.filter((x: number) => x !== id);
-    localStorage.setItem('noor_favorite_azkar_ids', JSON.stringify(updated));
+    safeStorage.setItem('noor_favorite_azkar_ids', JSON.stringify(updated));
     setActiveTab('favorites'); // trigger re-render
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md pt-[max(calc(env(safe-area-inset-top,0px)+6px),12px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+6px),12px)]">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}

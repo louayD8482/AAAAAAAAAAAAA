@@ -23,6 +23,7 @@ import {
   Award,
   BookOpenCheck
 } from 'lucide-react';
+import { safeStorage } from '../utils/safeStorage';
 
 interface RuqyahItem {
   id: string;
@@ -185,7 +186,7 @@ export default function RuqyahSection({ isEn = false }: RuqyahSectionProps) {
 
   // Counter state for reading progress
   const [completedCounts, setCompletedCounts] = useState<Record<string, number>>(() => {
-    const stored = localStorage.getItem('noor_ruqyah_counts');
+    const stored = safeStorage.getItem('noor_ruqyah_counts');
     if (stored) {
       try {
         return JSON.parse(stored);
@@ -200,7 +201,7 @@ export default function RuqyahSection({ isEn = false }: RuqyahSectionProps) {
 
   // Sync state to local storage
   useEffect(() => {
-    localStorage.setItem('noor_ruqyah_counts', JSON.stringify(completedCounts));
+    safeStorage.setItem('noor_ruqyah_counts', JSON.stringify(completedCounts));
   }, [completedCounts]);
 
   // Clean up audio on unmount

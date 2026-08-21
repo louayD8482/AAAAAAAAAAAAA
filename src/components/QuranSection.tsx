@@ -42,6 +42,7 @@ import { quranMetadata } from '../data/quran_metadata';
 import { offlineSurahs } from '../data/quran_text';
 import { QURAN_RECITERS, QuranReciter } from '../data/quran_reciters';
 import { SurahMetadata, SurahDetail, Ayah } from '../types';
+import { safeStorage } from '../utils/safeStorage';
 
 const FONT_FAMILIES = [
   { id: 'amiri', name: 'خط حفص / عثماني (الأميري)', class: 'font-amiri' },
@@ -64,7 +65,7 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
   
   // Bookmarks & Favorites
   const [savedBookmark, setSavedBookmark] = useState<{ surahNumber: number; ayahNumber: number; surahName: string } | null>(() => {
-    const saved = localStorage.getItem('noor_quran_bookmark');
+    const saved = safeStorage.getItem('noor_quran_bookmark');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
@@ -72,7 +73,7 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
   });
 
   const [favoriteAyahs, setFavoriteAyahs] = useState<string[]>(() => {
-    const saved = localStorage.getItem('noor_quran_fav_ayahs');
+    const saved = safeStorage.getItem('noor_quran_fav_ayahs');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
@@ -132,7 +133,7 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
 
     // 2. Check local persistent storage cache
     const cacheKey = `noor_quran_surah_cached_${surahMeta.number}`;
-    const cachedData = localStorage.getItem(cacheKey);
+    const cachedData = safeStorage.getItem(cacheKey);
     if (cachedData) {
       try {
         const parsed = JSON.parse(cachedData);
@@ -162,7 +163,7 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
           ayahs: loadedAyahs
         };
 
-        localStorage.setItem(cacheKey, JSON.stringify(fullSurah));
+        safeStorage.setItem(cacheKey, JSON.stringify(fullSurah));
         setSelectedSurah(fullSurah);
       }
     } catch (err) {
@@ -181,13 +182,13 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
       updated = [...favoriteAyahs, key];
     }
     setFavoriteAyahs(updated);
-    localStorage.setItem('noor_quran_fav_ayahs', JSON.stringify(updated));
+    safeStorage.setItem('noor_quran_fav_ayahs', JSON.stringify(updated));
   };
 
   const handleSaveBookmark = (surahNum: number, ayahNum: number, surahName: string) => {
     const bm = { surahNumber: surahNum, ayahNumber: ayahNum, surahName };
     setSavedBookmark(bm);
-    localStorage.setItem('noor_quran_bookmark', JSON.stringify(bm));
+    safeStorage.setItem('noor_quran_bookmark', JSON.stringify(bm));
   };
 
   const handleCopyAyah = (surahName: string, ayahNum: number, text: string) => {

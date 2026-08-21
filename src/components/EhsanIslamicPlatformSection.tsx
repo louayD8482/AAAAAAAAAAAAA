@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppSettings } from '../types';
+import { safeStorage } from '../utils/safeStorage';
 
 interface EhsanIslamicPlatformProps {
   settings: AppSettings;
@@ -236,7 +237,7 @@ export default function EhsanIslamicPlatformSection({ settings, isEn = false }: 
   // Hisn counter state
   const [quickHisnCount, setQuickHisnCount] = useState(() => {
     try {
-      return parseInt(localStorage.getItem('noor_quick_hisn_count') || '0', 10);
+      return parseInt(safeStorage.getItem('noor_quick_hisn_count') || '0', 10);
     } catch {
       return 0;
     }
@@ -245,7 +246,7 @@ export default function EhsanIslamicPlatformSection({ settings, isEn = false }: 
   const handleIncrementQuickHisn = () => {
     const nextVal = quickHisnCount + 1;
     setQuickHisnCount(nextVal);
-    localStorage.setItem('noor_quick_hisn_count', String(nextVal));
+    safeStorage.setItem('noor_quick_hisn_count', String(nextVal));
 
     if (settings.soundEnabled) {
       try {

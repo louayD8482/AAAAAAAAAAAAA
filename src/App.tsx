@@ -67,6 +67,7 @@ import UnifiedSearchFavoritesModal from './components/UnifiedSearchFavoritesModa
 import { ISLAMIC_AVATARS } from './assets/avatars';
 import { requestAllPermissions, scheduleAllNativeNotifications, checkPermissionsStatus } from './utils/nativeNotifications';
 import { playAdhanAudio, stopAdhanAudio, playPrePrayerChime, playIqamaChime } from './utils/adhanPlayer';
+import { safeStorage } from './utils/safeStorage';
 
 // @ts-ignore
 import defaultLogo from './assets/images/app_logo_avatar_1787082876013.jpg';
@@ -111,11 +112,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSearchFavModalOpen, setIsSearchFavModalOpen] = useState<boolean>(false);
   const [showWelcomeSplash, setShowWelcomeSplash] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('noor_hide_welcome_splash') !== 'true';
-    } catch {
-      return true;
-    }
+    return safeStorage.getItem('noor_hide_welcome_splash') !== 'true';
   });
   const [activeAdhanAlert, setActiveAdhanAlert] = useState<{
     prayerName: string;
@@ -159,7 +156,7 @@ export default function App() {
   }, []);
   
   const [settings, setSettings] = useState<AppSettings>(() => {
-    const stored = localStorage.getItem('noor_settings');
+    const stored = safeStorage.getItem('noor_settings');
     const defaults = {
       theme: 'dark',
       calculationMethod: 'UmmAlQura',
@@ -194,7 +191,7 @@ export default function App() {
         }
         const finalSettings = { ...defaults, ...parsed };
         if (modified) {
-          localStorage.setItem('noor_settings', JSON.stringify(finalSettings));
+          safeStorage.setItem('noor_settings', JSON.stringify(finalSettings));
         }
         return finalSettings;
       } catch (e) {
@@ -221,7 +218,7 @@ export default function App() {
       // Check browser notification support and permission
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-      const stored = localStorage.getItem('noor_azkar_reminders');
+      const stored = safeStorage.getItem('noor_azkar_reminders');
       let reminders = [];
       if (stored) {
         try {
@@ -236,7 +233,7 @@ export default function App() {
           { id: 'sleep', name: 'أذكار النوم', time: '22:00', enabled: true },
           { id: 'wakeup', name: 'أذكار الاستيقاظ', time: '05:30', enabled: false }
         ];
-        localStorage.setItem('noor_azkar_reminders', JSON.stringify(reminders));
+        safeStorage.setItem('noor_azkar_reminders', JSON.stringify(reminders));
       }
 
       const now = new Date();
@@ -247,7 +244,7 @@ export default function App() {
       const todayStr = now.toISOString().substring(0, 10); // "YYYY-MM-DD"
 
       // Load already triggered list
-      const triggeredStored = localStorage.getItem(triggeredKey);
+      const triggeredStored = safeStorage.getItem(triggeredKey);
       let triggeredList: string[] = [];
       if (triggeredStored) {
         try {
@@ -289,7 +286,7 @@ export default function App() {
 
             // Append to triggered list to prevent duplicate triggers in the same minute
             triggeredList.push(uniqueTriggerId);
-            localStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
+            safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
           }
         }
       });
@@ -356,7 +353,7 @@ export default function App() {
       const preMinOffset = settings.prePrayerMinutes ?? 5;
 
       // Load already triggered list
-      const triggeredStored = localStorage.getItem(triggeredKey);
+      const triggeredStored = safeStorage.getItem(triggeredKey);
       let triggeredList: string[] = [];
       if (triggeredStored) {
         try {
@@ -383,7 +380,7 @@ export default function App() {
             } catch (err) {}
           }
           triggeredList.push(fridayTriggerId);
-          localStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
+          safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
         }
       }
 
@@ -401,7 +398,7 @@ export default function App() {
             } catch (err) {}
           }
           triggeredList.push(tahajjudTriggerId);
-          localStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
+          safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
         }
       }
 
@@ -433,7 +430,7 @@ export default function App() {
                 } catch (err) {}
               }
               triggeredList.push(preTriggerId);
-              localStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
+              safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
             }
           }
         }
@@ -478,13 +475,13 @@ export default function App() {
 
             // Append to triggered list to prevent duplicate triggers in the same minute
             triggeredList.push(uniqueTriggerId);
-            localStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
+            safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
           }
         }
 
         // C. Check Post-Adhan / Iqama & Sunnah Follow-up Reminder (e.g. 10 minutes after adhan)
         if (p.name !== 'Sunrise' && (settings.iqamaReminder !== false)) {
-          const iqamaOffset = settings.iqamaMinutes ?? 10;
+          const iqamaOffset = settings.iqamaMinutes ?? 15;
           let postTotalMin = pHour * 60 + pMin + iqamaOffset;
           if (postTotalMin >= 24 * 60) postTotalMin -= 24 * 60;
           const postH = Math.floor(postTotalMin / 60);
@@ -499,30 +496,29 @@ export default function App() {
               }
               if ('Notification' in window && Notification.permission === 'granted') {
                 try {
-                  new Notification(`حان وقت صلاة ${p.arabicName} - إقامة الصلاة 🤲`, {
-                    body: `تذكير: أقيمت صلاة ${p.arabicName}. حافظ على صلاتك في جماعة ولا تنسَ السنن الرواتب وأذكار ما بعد الصلاة.`,
+                  new Notification(`حان الآن موعد إقامة صلاة ${p.arabicName} 🕌`, {
+                    body: `تذكير بالإقامة: انقضت ${iqamaOffset} دقيقة على أذان ${p.arabicName}. حيّ على الصلاة وأدرك صلاة الجماعة.`,
                     icon: settings.appLogoUrl || '/src/assets/images/app_logo_1784263255295.jpg',
                     dir: 'rtl'
                   });
                 } catch (err) {}
               }
               triggeredList.push(postTriggerId);
-              localStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
+              safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
             }
           }
         }
       });
     };
 
-    // Run check immediately and then every 15 seconds
     checkPrayerTimes();
-    const interval = setInterval(checkPrayerTimes, 15000);
+    const interval = setInterval(checkPrayerTimes, 30000);
     return () => clearInterval(interval);
-  }, [settings.visualAdhanAlert, settings.adhanReminder, settings.prePrayerReminder, settings.prePrayerMinutes, settings.iqamaReminder, settings.iqamaMinutes, settings.fridayKahfReminder, settings.tahajjudReminder, settings.city]);
+  }, [settings.city, settings.country, settings.calculationMethod, settings.adhanReminder, settings.visualAdhanAlert, settings.soundEnabled, settings.selectedAdhanVoice, settings.prePrayerReminder, settings.prePrayerMinutes, settings.iqamaReminder, settings.iqamaMinutes, settings.fridayKahfReminder, settings.tahajjudReminder]);
 
   // Sync settings and apply dark theme
   useEffect(() => {
-    localStorage.setItem('noor_settings', JSON.stringify(settings));
+    safeStorage.setItem('noor_settings', JSON.stringify(settings));
     const root = document.documentElement;
     if (settings.theme === 'dark') {
       root.classList.add('dark');
@@ -592,7 +588,7 @@ export default function App() {
 
   // Persisted Daily Worship Tracker
   const [dailyPrayers, setDailyPrayers] = useState<{ [key: string]: boolean }>(() => {
-    const saved = localStorage.getItem('noor_daily_prayers_checked');
+    const saved = safeStorage.getItem('noor_daily_prayers_checked');
     const todayStr = new Date().toISOString().substring(0, 10);
     if (saved) {
       try {
@@ -658,7 +654,7 @@ export default function App() {
 
   // Quick electronic Tasbih state
   const [quickTasbihCount, setQuickTasbihCount] = useState<number>(() => {
-    const saved = localStorage.getItem('noor_quick_tasbih_count');
+    const saved = safeStorage.getItem('noor_quick_tasbih_count');
     return saved ? parseInt(saved, 10) : 0;
   });
   const [quickTasbihText, setQuickTasbihText] = useState<string>('سبحان الله وبحمده');
@@ -668,10 +664,6 @@ export default function App() {
     { text: "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ", ref: "سورة الرعد • الآية ٢٨", type: "قرآن" },
     { text: "إِنَّ مَعَ الْعُسْرِ يُسْرًا", ref: "سورة الشرح • الآية ٦", type: "قرآن" },
     { text: "فَإِنِّي قَرِيبٌ أُجِيبُ دَعْوَةَ الدَّاعِ إِذَا دَعَانِ", ref: "سورة البقرة • الآية ١٨٦", type: "قرآن" },
-    { text: "وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰ", ref: "سورة الضحى • الآية ٥", type: "قرآن" },
-    { text: "وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا * وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ", ref: "سورة الطلاق • الآيات ٢-٣", type: "قرآن" },
-    { text: "إِنَّ اللَّهَ مَعَ الصَّابِرِينَ", ref: "سورة البقرة • الآية ١٥٣", type: "قرآن" },
-    { text: "ادْعُونِي أَسْتَجِبْ لَكُمْ", ref: "سورة غافر • الآية ٦٠", type: "قرآن" },
     { text: "مَا وَدَّعَكَ رَبُّكَ وَمَا قَلَىٰ", ref: "سورة الضحى • الآية ٣", type: "قرآن" },
     { text: "احفظ الله يحفظك، احفظ الله تجده تجاهك", ref: "الحديث الشريف • رواه الترمذي", type: "حديث" },
     { text: "عجبًا لأمر المؤمن إن أمره كله خير، وليس ذاك لأحد إلا للمؤمن", ref: "الحديث الشريف • رواه مسلم", type: "حديث" }
@@ -680,9 +672,9 @@ export default function App() {
 
   // Daily open streak counter effect
   useEffect(() => {
-    const lastOpen = localStorage.getItem('noor_last_open_date');
+    const lastOpen = safeStorage.getItem('noor_last_open_date');
     const todayStr = new Date().toISOString().substring(0, 10);
-    const currentStreak = localStorage.getItem('noor_streak_count');
+    const currentStreak = safeStorage.getItem('noor_streak_count');
     let streak = currentStreak ? parseInt(currentStreak, 10) : 1;
     
     if (lastOpen) {
@@ -695,12 +687,12 @@ export default function App() {
         } else {
           streak = 1;
         }
-        localStorage.setItem('noor_streak_count', streak.toString());
-        localStorage.setItem('noor_last_open_date', todayStr);
+        safeStorage.setItem('noor_streak_count', streak.toString());
+        safeStorage.setItem('noor_last_open_date', todayStr);
       }
     } else {
-      localStorage.setItem('noor_last_open_date', todayStr);
-      localStorage.setItem('noor_streak_count', '1');
+      safeStorage.setItem('noor_last_open_date', todayStr);
+      safeStorage.setItem('noor_streak_count', '1');
     }
     setStreakDays(streak);
   }, []);
@@ -710,14 +702,14 @@ export default function App() {
     const updated = { ...dailyPrayers, [key]: !dailyPrayers[key] };
     setDailyPrayers(updated);
     const todayStr = new Date().toISOString().substring(0, 10);
-    localStorage.setItem('noor_daily_prayers_checked', JSON.stringify({ date: todayStr, prayers: updated }));
+    safeStorage.setItem('noor_daily_prayers_checked', JSON.stringify({ date: todayStr, prayers: updated }));
   };
 
   // Increment quick electronic tasbih
   const incrementQuickTasbih = () => {
     const newCount = quickTasbihCount + 1;
     setQuickTasbihCount(newCount);
-    localStorage.setItem('noor_quick_tasbih_count', newCount.toString());
+    safeStorage.setItem('noor_quick_tasbih_count', newCount.toString());
     
     // Add physical vibration feedback on every click
     if (navigator.vibrate) {
@@ -747,32 +739,57 @@ export default function App() {
 
   const resetQuickTasbih = () => {
     setQuickTasbihCount(0);
-    localStorage.setItem('noor_quick_tasbih_count', '0');
+    safeStorage.setItem('noor_quick_tasbih_count', '0');
   };
 
   const handleShareApp = async () => {
-    const shareData = {
-      title: settings.appName || (isEn ? 'Noor Al-Islam App' : 'تطبيق نور الإسلام'),
-      text: isEn 
-        ? 'Noor Al-Islam: Comprehensive Islamic companion (Quran, Adhkar, Prayer Times, Tasbih, Ruqyah)' 
-        : 'تطبيق نور الإسلام: رفيقك الروحي الشامل (القرآن، الأذكار، مواقيت الصلاة، التسبيح، الرقية الشرعية)',
-      url: window.location.href
-    };
+    const shareUrl = window.location.href;
+    const shareTitle = settings.appName || (isEn ? 'Noor Al-Islam App' : 'تطبيق نور الإسلام');
+    const shareMessage = isEn 
+      ? `Noor Al-Islam: Comprehensive Islamic companion (Quran, Adhkar, Prayer Times, Tasbih, Ruqyah)\n${shareUrl}` 
+      : `تطبيق نور الإسلام: رفيقك الروحي الشامل (القرآن الكريم، الأذكار، مواقيت الصلاة، التسبيح، الرقية الشرعية)\n${shareUrl}`;
 
+    // 1. Try Native Web Share API if supported
     if (navigator.share) {
       try {
-        await navigator.share(shareData);
+        await navigator.share({
+          title: shareTitle,
+          text: shareMessage,
+          url: shareUrl
+        });
         return;
       } catch (err) {
-        // user canceled or unsupported
+        // User cancelled or share permission not available in iframe, continue to copy fallback
       }
     }
 
+    // 2. Modern Clipboard API fallback
+    let copied = false;
     try {
-      await navigator.clipboard.writeText(window.location.href);
-    } catch (e) {
-      // fallback
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareMessage);
+        copied = true;
+      }
+    } catch (e) {}
+
+    // 3. Robust ExecCommand fallback for older iOS Safari / sandboxed iframes
+    if (!copied) {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = shareMessage;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        textArea.setAttribute('readonly', '');
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        textArea.setSelectionRange(0, 99999);
+        copied = document.execCommand('copy');
+        document.body.removeChild(textArea);
+      } catch (err) {}
     }
+
     setShowShareToast(true);
     setTimeout(() => setShowShareToast(false), 3500);
   };
@@ -886,6 +903,22 @@ export default function App() {
     return getNextPrayerInfo();
   }, [getNextPrayerInfo]);
 
+  // Live trigger function for Adhan & Visual alert screen (preview & live playback)
+  const handleTriggerAdhanPreview = useCallback((targetPrayerName?: string) => {
+    const target = (targetPrayerName ? computedPrayers.find(p => p.name.toLowerCase() === targetPrayerName.toLowerCase()) : null) || nextPrayer || computedPrayers[0];
+    const prayerKey = (target.name.charAt(0).toUpperCase() + target.name.slice(1).toLowerCase()) as keyof typeof PRAYERS_INFO;
+    const info = PRAYERS_INFO[prayerKey] || PRAYERS_INFO['Fajr'];
+
+    setActiveAdhanAlert({
+      prayerName: target.name,
+      arabicName: target.arabicName,
+      time: target.time,
+      city: settings.city || 'المنامة',
+      supplication: info?.supplication || PRAYERS_INFO.Fajr.supplication,
+      tip: info?.tip || PRAYERS_INFO.Fajr.tip
+    });
+  }, [computedPrayers, nextPrayer, settings.city]);
+
   const handleNavigateToSection = useCallback((sectionId: string | null) => {
     setActiveSection(sectionId);
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -941,7 +974,14 @@ export default function App() {
       avatarUrl: ISLAMIC_AVATARS.prayer,
       colorClass: 'from-sky-600 to-indigo-600',
       bgLight: 'bg-sky-500/10 text-sky-800 border-sky-500/20',
-      component: <PrayerTimesSection settings={settings} onUpdateSettings={handleUpdateSettings} isEn={isEn} />
+      component: (
+        <PrayerTimesSection 
+          settings={settings} 
+          onUpdateSettings={handleUpdateSettings} 
+          onTriggerAdhanPreview={handleTriggerAdhanPreview}
+          isEn={isEn} 
+        />
+      )
     },
     {
       id: 'khatma',
@@ -1154,7 +1194,7 @@ export default function App() {
 
       {/* Main Layout Grid with safe offset for fixed Header */}
       {!showWelcomeSplash && (
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 pt-[calc(max(env(safe-area-inset-top,0px),56px)+3.75rem)] sm:pt-[calc(max(env(safe-area-inset-top,0px),56px)+4.25rem)]">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-3 pt-[calc(max(env(safe-area-inset-top,0px),0px)+4rem)] sm:pt-[calc(max(env(safe-area-inset-top,0px),0px)+4.25rem)]">
         <AnimatePresence mode="wait">
           {activeSection === null ? (
             <motion.div
@@ -1345,17 +1385,30 @@ export default function App() {
                     </div>
 
                     {/* Quick Settings Toggles for Adhan alert inside */}
-                    <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
-                      <span>{isEn ? "Visual & Audio Adhan alert" : "تنبيه مرئي ومسموع وقت دخول الأذان"}</span>
+                    <div className="mt-5 pt-3.5 border-t border-white/10 flex flex-col gap-2.5 text-xs text-slate-300">
+                      <div className="flex items-center justify-between">
+                        <span>{isEn ? "Visual & Audio Adhan alert" : "تنبيه مرئي ومسموع وقت دخول الأذان"}</span>
+                        <button
+                          id="prayer-quick-sound-toggle-home"
+                          onClick={() => handleUpdateSettings({ ...settings, visualAdhanAlert: !settings.visualAdhanAlert })}
+                          className={`p-2 rounded-xl transition-all cursor-pointer active:scale-95 ${
+                            settings.visualAdhanAlert ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-white/10 text-emerald-200'
+                          }`}
+                          title={settings.visualAdhanAlert ? (isEn ? "Disable alert" : "تعطيل التنبيه المرئي") : (isEn ? "Enable alert" : "تفعيل التنبيه المرئي")}
+                        >
+                          <Bell className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Live Fullscreen Adhan Screen Preview Button on Home Card */}
                       <button
-                        id="prayer-quick-sound-toggle-home"
-                        onClick={() => handleUpdateSettings({ ...settings, visualAdhanAlert: !settings.visualAdhanAlert })}
-                        className={`p-2 rounded-xl transition-all cursor-pointer active:scale-95 ${
-                          settings.visualAdhanAlert ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-white/10 text-emerald-200'
-                        }`}
-                        title={settings.visualAdhanAlert ? (isEn ? "Disable alert" : "تعطيل التنبيه المرئي") : (isEn ? "Enable alert" : "تفعيل التنبيه المرئي")}
+                        id="prayer-home-live-adhan-preview-btn"
+                        type="button"
+                        onClick={() => handleTriggerAdhanPreview(nextPrayer?.name || 'Asr')}
+                        className="w-full py-2 px-3 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:bg-emerald-500/30 text-emerald-200 hover:text-white font-bold text-[11px] rounded-xl border border-emerald-400/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                       >
-                        <Bell className="w-4 h-4" />
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                        <span>{isEn ? "Live Adhan & Visual Alert Preview" : "معاينة شاشة وسماع الأذان الآن 🕌 (تجربة حية)"}</span>
                       </button>
                     </div>
                   </div>
@@ -1429,7 +1482,7 @@ export default function App() {
               className="space-y-6"
             >
               {/* Floating Back & Quick-Navigation Strip - Pixel Perfect Dark Luxury Theme */}
-              <div className="bg-[#0B1516] border border-[#142326] p-3.5 sm:p-4 rounded-3xl shadow-2xl sticky top-[72px] sm:top-[80px] z-30 mb-6 space-y-3.5">
+              <div className="bg-[#0B1516] border border-[#142326] p-3 sm:p-4 rounded-3xl shadow-xl sticky top-[58px] sm:top-[66px] z-30 mb-4 space-y-3">
                 
                 {/* Top Row: Current Section Title and Return Home button */}
                 <div className="flex items-center justify-between gap-3">
@@ -1516,16 +1569,16 @@ export default function App() {
 
       {/* Persistent Islamic footer dedication */}
       {!showWelcomeSplash && (
-        <footer className="w-full bg-white dark:bg-[#050A0B] border-t border-[#EBE7DF] dark:border-[#132326] py-10 px-6 sm:px-12 text-center text-xs text-slate-500 dark:text-slate-400 space-y-4 font-sans mt-12">
-          <div className="max-w-2xl mx-auto space-y-2.5 leading-relaxed font-semibold">
-            <p className="text-[15px] text-emerald-900 dark:text-emerald-300 font-extrabold font-amiri">
+        <footer className="w-full bg-white dark:bg-[#050A0B] border-t border-[#EBE7DF] dark:border-[#132326] py-6 px-4 sm:px-8 text-center text-xs text-slate-500 dark:text-slate-400 space-y-3.5 font-sans mt-6">
+          <div className="max-w-2xl mx-auto space-y-2 leading-relaxed font-semibold">
+            <p className="text-sm sm:text-[15px] text-emerald-900 dark:text-emerald-300 font-extrabold font-amiri">
               {settings.dedicationText || "هذا التطبيق صدقة جارية بإذن اللّٰه تعالى عن لؤي بن حسين وعن والده رحمه اللّٰه وغفر له وجميع المسلمين والمسلمات الأحياء منهم والأموات."}
             </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500">
               تم التطوير بحبّ وإتقان ليكون تطبيقاً سهلاً، جميلاً وسلساً للمستخدمين. تقبل الله طاعاتكم جميعاً.
             </p>
           </div>
-          <div className="flex flex-wrap justify-center items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-900 max-w-xl mx-auto">
+          <div className="flex flex-wrap justify-center items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 pt-3 border-t border-slate-100 dark:border-slate-900 max-w-xl mx-auto">
             <span>المطور: {settings.developerName || "لؤي بن حسين"}</span>
             <span>•</span>
             <span>© 2026 - جميع الحقوق محفوظة</span>
@@ -1568,6 +1621,7 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
+        onTriggerAdhanPreview={handleTriggerAdhanPreview}
       />
 
       {/* Official App Store Privacy Policy Modal */}
@@ -1589,13 +1643,17 @@ export default function App() {
       <VisualAdhanModal
         isOpen={activeAdhanAlert !== null}
         onClose={() => setActiveAdhanAlert(null)}
-        prayerName={activeAdhanAlert?.prayerName || ''}
-        arabicName={activeAdhanAlert?.arabicName || ''}
-        time={activeAdhanAlert?.time || ''}
-        city={activeAdhanAlert?.city || ''}
-        supplication={activeAdhanAlert?.supplication || ''}
-        tip={activeAdhanAlert?.tip || ''}
+        prayerName={activeAdhanAlert?.prayerName || 'Asr'}
+        arabicName={activeAdhanAlert?.arabicName || 'العصر'}
+        time={activeAdhanAlert?.time || '15:12'}
+        city={activeAdhanAlert?.city || settings.city || 'المنامة'}
+        country={settings.country || 'مملكة البحرين'}
+        supplication={activeAdhanAlert?.supplication}
+        tip={activeAdhanAlert?.tip}
         soundEnabled={settings.soundEnabled}
+        selectedVoiceId={settings.selectedAdhanVoice || 'makkah'}
+        onVoiceChange={(v) => handleUpdateSettings({ ...settings, selectedAdhanVoice: v })}
+        allPrayers={computedPrayers.map(p => ({ name: p.name, arabicName: p.arabicName, time: p.time }))}
         isEn={isEn}
       />
       {/* Landscape Orientation Lock Screen overlay for mobile devices */}

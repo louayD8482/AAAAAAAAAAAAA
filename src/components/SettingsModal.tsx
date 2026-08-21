@@ -42,6 +42,7 @@ interface SettingsModalProps {
   onClose: () => void;
   settings: AppSettings;
   onUpdateSettings: (settings: AppSettings) => void;
+  onTriggerAdhanPreview?: (prayerName?: string) => void;
 }
 
 export default function SettingsModal({
@@ -49,6 +50,7 @@ export default function SettingsModal({
   onClose,
   settings,
   onUpdateSettings,
+  onTriggerAdhanPreview,
 }: SettingsModalProps) {
   const [notificationPermission, setNotificationPermission] = useState<string>(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -214,25 +216,29 @@ export default function SettingsModal({
   const isEn = settings.language === 'en';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-md pt-[max(calc(env(safe-area-inset-top,0px)+6px),12px)] pb-[max(calc(env(safe-area-inset-bottom,0px)+6px),12px)]">
       <div 
         id="settings-modal"
-        className="w-full max-w-lg bg-[#FCFAF6] dark:bg-[#070D0E] border border-[#EBE7DF] dark:border-[#142225] rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 max-h-[92vh] flex flex-col font-sans"
+        className="w-full max-w-lg bg-[#FCFAF6] dark:bg-[#070D0E] border border-[#EBE7DF] dark:border-[#142225] rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 max-h-[92vh] flex flex-col font-sans relative"
         dir={isEn ? "ltr" : "rtl"}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#EBE7DF] dark:border-[#142225] bg-gradient-to-r from-emerald-800 to-teal-700 text-white">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 sm:py-4 border-b border-[#EBE7DF] dark:border-[#142225] bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 text-white shrink-0">
           <div className="flex items-center gap-2.5">
-            <Sparkles className="w-5 h-5 text-amber-300" />
-            <h3 className="text-lg font-black font-kufi">{isEn ? "App Settings" : "إعدادات التطبيق"}</h3>
+            <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+            <h3 className="text-base sm:text-lg font-black font-kufi">{isEn ? "App Settings & Control" : "إعدادات وتفضيلات التطبيق"}</h3>
           </div>
+          
+          {/* Prominent, easy-to-tap close button */}
           <button
             id="close-settings-btn"
             onClick={onClose}
-            className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white cursor-pointer active:scale-95"
-            aria-label="Close"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-all text-white cursor-pointer active:scale-95 text-xs font-black shadow-sm border border-white/30"
+            aria-label="Close Settings"
+            title={isEn ? "Close and Return" : "إغلاق والرجوع"}
           >
-            <X className="w-5 h-5" />
+            <span>{isEn ? "Close" : "إغلاق"}</span>
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -679,6 +685,24 @@ export default function SettingsModal({
                     );
                   })}
                 </div>
+
+                {/* Full Visual Adhan Live Preview Button */}
+                {onTriggerAdhanPreview && (
+                  <div className="pt-2 border-t border-emerald-500/10">
+                    <button
+                      id="settings-preview-visual-adhan-btn"
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onTriggerAdhanPreview('Asr');
+                      }}
+                      className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-600 via-sky-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border border-cyan-300/30"
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                      <span>{isEn ? "Open Live Fullscreen Adhan Screen (Preview)" : "معاينة شاشة الأذان المرئية والصوتية كاملة 🕌 (تجربة حية)"}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -876,11 +900,27 @@ export default function SettingsModal({
             </div>
           </div>
 
+          {/* Quick Return / Close Action at bottom of content */}
+          <div className="pt-2">
+            <button
+              id="bottom-close-settings-btn"
+              onClick={onClose}
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-600 hover:to-teal-600 text-white font-kufi font-black text-sm rounded-2xl shadow-lg shadow-emerald-950/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+            >
+              <span>{isEn ? "Save & Return to Home" : "حفظ التفضيلات والعودة للقائمة الرئيسية 🏠"}</span>
+            </button>
+          </div>
+
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-[#EBE7DF] dark:border-[#142225] bg-[#FAF8F5] dark:bg-[#050A0B] flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 font-sans">
-          <span>© 2026 - {isEn ? "All Rights Reserved" : "جميع الحقوق محفوظة"}</span>
+        <div className="px-5 py-3 border-t border-[#EBE7DF] dark:border-[#142225] bg-[#FAF8F5] dark:bg-[#050A0B] flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 font-sans shrink-0">
+          <button
+            onClick={onClose}
+            className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer flex items-center gap-1.5 active:scale-95"
+          >
+            <span>{isEn ? "← Back to Home" : "← الرجوع للرئيسية"}</span>
+          </button>
           <span className="font-bold text-emerald-800 dark:text-emerald-300">{settings.developerName || "لؤي بن حسين"}</span>
         </div>
       </div>
