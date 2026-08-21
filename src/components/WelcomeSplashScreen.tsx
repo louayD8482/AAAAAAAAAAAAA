@@ -62,16 +62,65 @@ export default function WelcomeSplashScreen({ settings, isEn = false, onEnter }:
           </p>
         </div>
 
-        {/* Center: Circular App Logo with Soft Glow */}
-        <div className="relative my-1">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-3 border-amber-400/70 shadow-2xl shadow-amber-500/25 p-1 bg-gradient-to-br from-emerald-700 via-teal-900 to-slate-950 ring-4 ring-emerald-500/20 group">
+        {/* Center: Circular App Logo with Soft Sustained Breathing & Glowing Pulse Animation */}
+        <div className="relative my-2 flex items-center justify-center">
+          {/* Animated Ambient Outer Golden/Emerald Halo */}
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.18, 1],
+              opacity: [0.35, 0.75, 0.35],
+              rotate: [0, 180, 360]
+            }}
+            transition={{ 
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute -inset-4 rounded-full bg-gradient-to-tr from-amber-500/30 via-emerald-500/30 to-teal-400/30 blur-xl pointer-events-none"
+          />
+
+          {/* Gentle Breathing Ring Indicator */}
+          <motion.div
+            animate={{
+              scale: [1, 1.08, 1],
+              borderColor: [
+                'rgba(245, 158, 11, 0.4)', 
+                'rgba(16, 185, 129, 0.7)', 
+                'rgba(245, 158, 11, 0.4)'
+              ]
+            }}
+            transition={{
+              duration: 3.5,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute -inset-1.5 rounded-full border-2 border-amber-400/40 pointer-events-none"
+          />
+
+          {/* Main Logo Container with Sustained Pulse */}
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.03, 1],
+              boxShadow: [
+                '0 0 20px rgba(245, 158, 11, 0.3)',
+                '0 0 35px rgba(16, 185, 129, 0.5)',
+                '0 0 20px rgba(245, 158, 11, 0.3)'
+              ]
+            }}
+            transition={{ 
+              duration: 3.5,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-3 border-amber-400/80 p-1 bg-gradient-to-br from-emerald-700 via-teal-900 to-slate-950 ring-4 ring-emerald-500/20 group relative z-10"
+          >
             <img 
               src={settings.appLogoUrl || ISLAMIC_AVATARS.appLogo} 
               alt="Logo" 
               className="w-full h-full object-cover rounded-full"
               referrerPolicy="no-referrer"
             />
-          </div>
+          </motion.div>
         </div>
 
         {/* Below Logo: Main Greeting & Description */}

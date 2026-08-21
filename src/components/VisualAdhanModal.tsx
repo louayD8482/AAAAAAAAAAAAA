@@ -270,19 +270,34 @@ export default function VisualAdhanModal({
           
           {/* Right Section (in RTL): App Title & Live Audio status */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/20 flex items-center justify-center text-amber-300 shadow-xl">
-              <Sparkles className="w-5 h-5 animate-pulse" />
+            <div className="w-11 h-11 rounded-2xl bg-black/40 backdrop-blur-xl border border-amber-400/40 p-0.5 overflow-hidden shadow-xl shrink-0">
+              <img 
+                src="/app-icon.png" 
+                alt="نور الإسلام" 
+                className="w-full h-full object-cover rounded-[14px]"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                }}
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm font-black text-amber-300 font-kufi">
                   {isEn ? 'Noor Al-Islam • Live Adhan' : 'نور الإسلام • نداء الصلاة'}
                 </span>
-                {isPlaying && (
+                {isPlaying ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-400/40 text-[10px] font-bold text-emerald-300">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                    <span>{isEn ? 'Adhan Playing' : 'الآذان يُرفع الآن'}</span>
+                    <span>{isEn ? 'Adhan Playing 🔊' : 'الآذان يُرفع الآن 🔊'}</span>
                   </span>
+                ) : (
+                  <button 
+                    onClick={handleTogglePlay}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/30 border border-amber-400/40 text-[10px] font-bold text-amber-300 animate-pulse cursor-pointer hover:bg-amber-500/50"
+                  >
+                    <span>{isEn ? '▶ Play Sound' : '▶ تشغيل الصوت'}</span>
+                  </button>
                 )}
               </div>
               <p className="text-[11px] text-slate-300 font-medium">
@@ -383,12 +398,14 @@ export default function VisualAdhanModal({
         {/* MIDDLE SECTION: Ambient Islamic Audio Waves & Slideshow indicator */}
         <main className="relative z-20 flex-1 flex flex-col items-center justify-center px-4 max-w-4xl mx-auto w-full text-center">
           
-          {/* Animated Islamic Dome Graphic / Soundwave Visualizer */}
-          {isPlaying && (
+          {/* Animated Islamic Dome Graphic / Soundwave Visualizer or Play Button */}
+          {isPlaying ? (
             <motion.div 
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-4 flex items-center justify-center gap-1.5"
+              onClick={handleTogglePlay}
+              className="mb-4 flex items-center justify-center gap-1.5 cursor-pointer p-2 hover:opacity-90"
+              title="انقر لإيقاف الصوت مؤقتاً"
             >
               {[40, 75, 95, 60, 100, 70, 85, 45, 90, 65, 35].map((h, i) => (
                 <motion.span
@@ -399,6 +416,19 @@ export default function VisualAdhanModal({
                 />
               ))}
             </motion.div>
+          ) : (
+            <motion.button
+              type="button"
+              onClick={handleTogglePlay}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="mb-4 px-5 py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-emerald-500 text-slate-950 font-black text-xs sm:text-sm shadow-[0_0_25px_rgba(245,158,11,0.6)] border-2 border-amber-200 flex items-center gap-2 cursor-pointer transition-all"
+            >
+              <Volume2 className="w-4 h-4 animate-bounce" />
+              <span>{isEn ? 'Tap to Play Adhan Audio (Sound)' : 'اضغط هنا لتشغيل صوت الأذان 🔊'}</span>
+            </motion.button>
           )}
 
           {/* Wallpaper Carousel navigation dots */}

@@ -9,7 +9,7 @@ import ruqyahAvatar from './images/ruqyah_avatar_1787082832436.jpg';
 import profileAvatar from './images/profile_avatar_1787082844122.jpg';
 import aiAvatar from './images/ai_avatar_1787082855885.jpg';
 import driveAvatar from './images/drive_avatar_1787082866284.jpg';
-import appLogoAvatar from './images/app_logo_avatar_1787082876013.jpg';
+import appLogoAvatar from './images/app_main_icon_1787331125415.jpg';
 import langAvatar from './images/lang_avatar_1787082886126.jpg';
 import themeAvatar from './images/theme_avatar_1787082896351.jpg';
 import shareAvatar from './images/share_avatar_1787082910826.jpg';

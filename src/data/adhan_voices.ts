@@ -21,9 +21,8 @@ export const ADHAN_VOICES_LIST: AdhanVoiceOption[] = [
     muezzin: 'الشيخ علي ملا ومؤذنو الحرم المكي',
     description: 'الأذان المكي الخاشع من الكعبة المشرفة بمقام البياتي والحجاز',
     audioUrls: [
-      'https://www.islamcan.com/audio/adhan/azan1.mp3',
-      'https://server8.mp3quran.net/afs/athan1.mp3',
-      'https://download.quranicaudio.com/athan/makkah.mp3'
+      '/audio/makkah.mp3',
+      'https://raw.githubusercontent.com/abodehq/Athan-MP3/master/Sounds/Athan%20Makkah.mp3'
     ],
     nativeFile: 'adhan_makkah.wav'
   },
@@ -34,9 +33,8 @@ export const ADHAN_VOICES_LIST: AdhanVoiceOption[] = [
     muezzin: 'الشيخ عصام بخاري ومؤذنو المسجد النبوي',
     description: 'أذان طيبة الطيبة الندي من روضة النبي ﷺ بمقام الرست',
     audioUrls: [
-      'https://www.islamcan.com/audio/adhan/azan2.mp3',
-      'https://download.quranicaudio.com/athan/madinah.mp3',
-      'https://server8.mp3quran.net/afs/athan2.mp3'
+      '/audio/madinah.mp3',
+      'https://raw.githubusercontent.com/wsalahuddin/adhan/main/adhan-madina-001.mp3'
     ],
     nativeFile: 'adhan_madinah.wav'
   },
@@ -47,9 +45,8 @@ export const ADHAN_VOICES_LIST: AdhanVoiceOption[] = [
     muezzin: 'الشيخ مشاري راشد العفاسي',
     description: 'أذان شجي ونقي بصوت الشيخ مشاري راشد العفاسي',
     audioUrls: [
-      'https://www.islamcan.com/audio/adhan/azan3.mp3',
-      'https://server8.mp3quran.net/afs/athan.mp3',
-      'https://download.quranicaudio.com/athan/alafasy.mp3'
+      '/audio/alafasy.mp3',
+      'https://raw.githubusercontent.com/abodehq/Athan-MP3/master/Sounds/Athan%20Mishary%20Alafasi.mp3'
     ],
     nativeFile: 'adhan_alafasy.wav'
   },
@@ -60,9 +57,8 @@ export const ADHAN_VOICES_LIST: AdhanVoiceOption[] = [
     muezzin: 'فضيلة الشيخ عبد الباسط عبد الصمد',
     description: 'الأذان التاريخي الخالد بصوت كروان القرآن',
     audioUrls: [
-      'https://www.islamcan.com/audio/adhan/azan6.mp3',
-      'https://download.quranicaudio.com/athan/abdulbasit.mp3',
-      'https://server8.mp3quran.net/afs/athan_abdulbasit.mp3'
+      '/audio/abdulbasit.mp3',
+      'https://raw.githubusercontent.com/abodehq/Athan-MP3/master/Sounds/Athan%20Abed%20Albase6.mp3'
     ],
     nativeFile: 'adhan_abdulbasit.wav'
   },
@@ -73,9 +69,8 @@ export const ADHAN_VOICES_LIST: AdhanVoiceOption[] = [
     muezzin: 'مؤذنو المسجد الأقصى الشريف (القدس)',
     description: 'الأذان المبارك من مسرى رسول الله ﷺ',
     audioUrls: [
-      'https://www.islamcan.com/audio/adhan/azan5.mp3',
-      'https://download.quranicaudio.com/athan/alaqsa.mp3',
-      'https://server8.mp3quran.net/afs/athan_alaqsa.mp3'
+      '/audio/alaqsa.mp3',
+      'https://raw.githubusercontent.com/IslamAlorabI/SalatTimes-MP3Adhan/main/Adhan/ebrahim_silawi.mp3'
     ],
     nativeFile: 'adhan_alaqsa.wav'
   },
@@ -86,8 +81,8 @@ export const ADHAN_VOICES_LIST: AdhanVoiceOption[] = [
     muezzin: 'الشيخ ناصر القطامي',
     description: 'تأدية خاشعة ومؤثرة تفيض بالسكينة',
     audioUrls: [
-      'https://www.islamcan.com/audio/adhan/azan7.mp3',
-      'https://download.quranicaudio.com/athan/qatami.mp3'
+      '/audio/qatami.mp3',
+      'https://raw.githubusercontent.com/abodehq/Athan-MP3/master/Sounds/Athan%20Nasser%20Alqatami.mp3'
     ],
     nativeFile: 'adhan_qatami.wav'
   },
@@ -98,10 +93,34 @@ export const ADHAN_VOICES_LIST: AdhanVoiceOption[] = [
     muezzin: 'الشيخ سعد الغامدي',
     description: 'أذان متميز بالخشوع والوضوح',
     audioUrls: [
-      'https://www.islamcan.com/audio/adhan/azan8.mp3',
-      'https://download.quranicaudio.com/athan/ghamdi.mp3'
+      '/audio/ghamdi.mp3',
+      'https://raw.githubusercontent.com/IslamAlorabI/SalatTimes-MP3Adhan/main/Adhan/saad_alghamedi_.mp3'
     ],
     nativeFile: 'adhan_ghamdi.wav'
+  },
+  {
+    id: 'menshawy',
+    nameAr: 'أذان الشيخ محمد صديق المنشاوي',
+    nameEn: 'Sheikh Mohammad Siddiq Al-Menshawy Adhan',
+    muezzin: 'الشيخ محمد صديق المنشاوي',
+    description: 'تلاوة وأذان خاشع يبكي القلوب',
+    audioUrls: [
+      '/audio/menshawy.mp3',
+      'https://raw.githubusercontent.com/abodehq/Athan-MP3/master/Sounds/Athan%20Mohammad%20Almenshawy.mp3'
+    ],
+    nativeFile: 'adhan_menshawy.wav'
+  },
+  {
+    id: 'islam_sobhi',
+    nameAr: 'أذان القارئ إسلام صبحي',
+    nameEn: 'Islam Sobhi Adhan',
+    muezzin: 'القارئ إسلام صبحي',
+    description: 'صوت هادئ ونغم عذب يجلب الطمأنينة',
+    audioUrls: [
+      '/audio/islam_sobhi.mp3',
+      'https://raw.githubusercontent.com/IslamAlorabI/SalatTimes-MP3Adhan/main/Adhan/islam_sobhi.mp3'
+    ],
+    nativeFile: 'adhan_islam_sobhi.wav'
   },
   {
     id: 'takbeer',
@@ -110,8 +129,8 @@ export const ADHAN_VOICES_LIST: AdhanVoiceOption[] = [
     muezzin: 'تكبيرات الحرمين الشريفين',
     description: 'الله أكبر الله أكبر (مقطع قصير ومناسب لبيئات العمل)',
     audioUrls: [
-      'https://www.islamcan.com/audio/adhan/azan10.mp3',
-      'https://www.islamcan.com/audio/adhan/azan1.mp3'
+      '/audio/takbeer.mp3',
+      'https://raw.githubusercontent.com/IslamAlorabI/SalatTimes-MP3Adhan/main/Adhan/hamd_aldaghiri.mp3'
     ],
     nativeFile: 'adhan_takbeer.wav'
   }

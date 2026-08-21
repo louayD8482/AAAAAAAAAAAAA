@@ -25,6 +25,15 @@ export interface AppSettings {
   soundEnabled: boolean;
   customAdhanSound: string; // 'default' or custom tone
   selectedAdhanVoice?: string; // 'makkah' | 'madinah' | 'alaqsa' | 'qatami' | 'abdulbasit' | 'hadrawi'
+  prayerSoundPreferences?: {
+    Fajr?: 'full_adhan' | 'soft_chime' | 'takbeer_only' | 'silent';
+    Dhuhr?: 'full_adhan' | 'soft_chime' | 'takbeer_only' | 'silent';
+    Asr?: 'full_adhan' | 'soft_chime' | 'takbeer_only' | 'silent';
+    Maghrib?: 'full_adhan' | 'soft_chime' | 'takbeer_only' | 'silent';
+    Isha?: 'full_adhan' | 'soft_chime' | 'takbeer_only' | 'silent';
+  };
+  quranWirdReminder?: boolean;
+  quranWirdTime?: string; // HH:MM e.g. "20:00"
   appName?: string;
   dedicationText?: string;
   developerName?: string;

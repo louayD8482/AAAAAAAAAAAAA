@@ -15,28 +15,48 @@ export function setAdhanPlayStateCallback(callback: ((isPlaying: boolean) => voi
 }
 
 /**
+ * Unlock Web Audio & Audio Context on first user touch/interaction
+ */
+export function unlockAudio(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      const ctx = new AudioContextClass();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+    }
+  } catch (e) {}
+}
+
+/**
  * Play authentic MP3 Adhan audio stream with volume control and automatic stop
  */
 export async function playAdhanAudio(voiceId: string = 'makkah', volume: number = 1.0): Promise<HTMLAudioElement | null> {
   // Stop existing audio if playing
   stopAdhanAudio();
+  unlockAudio();
 
   const voice = ADHAN_VOICES_LIST.find(v => v.id === voiceId) || ADHAN_VOICES_LIST[0];
   currentVoiceId = voice.id;
 
-  // Curated high-reliability MP3 CDNs for real authentic Muezzins
+  // Curated high-reliability local MP3 and fallback CDNs for real authentic Muezzins
   const candidateUrls = [
     ...voice.audioUrls,
-    'https://server8.mp3quran.net/afs/athan1.mp3',
-    'https://www.islamcan.com/audio/adhan/azan1.mp3',
-    'https://download.quranicaudio.com/athan/makkah.mp3',
-    'https://server8.mp3quran.net/afs/athan2.mp3'
+    `/audio/${voice.id}.mp3`,
+    '/audio/makkah.mp3',
+    'https://raw.githubusercontent.com/abodehq/Athan-MP3/master/Sounds/Athan%20Makkah.mp3'
   ];
 
   for (const url of candidateUrls) {
     try {
-      const audio = new Audio(url);
-      audio.crossOrigin = 'anonymous';
+      const audio = new Audio();
+      audio.src = url;
+      // Do not set crossOrigin for same-origin local files to prevent unnecessary CORS preflights
+      if (url.startsWith('http')) {
+        audio.crossOrigin = 'anonymous';
+      }
       audio.volume = Math.max(0, Math.min(1, volume));
       audio.preload = 'auto';
 
@@ -57,11 +77,14 @@ export async function playAdhanAudio(voiceId: string = 'makkah', volume: number 
         if (onPlayStateChangeCallback) onPlayStateChangeCallback(true);
       };
 
-      audio.onerror = () => {
-        console.warn(`Adhan audio error from source ${url}, switching...`);
+      audio.onerror = (e) => {
+        console.warn(`Adhan audio error from source ${url}, attempting next mirror...`, e);
       };
 
-      await audio.play();
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+      }
       
       // Auto-stop safety fallback after full adhan duration (max 5 minutes)
       if (autoStopTimeoutId) clearTimeout(autoStopTimeoutId);

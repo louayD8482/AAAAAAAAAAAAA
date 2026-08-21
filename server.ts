@@ -357,6 +357,9 @@ app.get("/privacy-policy", (req, res) => {
   res.send(html);
 });
 
+// Serve static assets from public folder directly
+app.use(express.static(path.join(process.cwd(), "public")));
+
 // Serve static files / Vite middleware
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
