@@ -1085,21 +1085,21 @@ export default function App() {
       dir={isEn ? "ltr" : "rtl"}
     >
       {/* Main Premium App Bar with iOS Native Safe-Area & Dynamic Island handling */}
-      <header className="top-bar px-2 sm:px-6 lg:px-8 py-1.5 flex items-center justify-between border-b border-[#EBE7DF] dark:border-[#142225]">
+      <header className="top-bar px-2.5 sm:px-6 lg:px-8 py-2 flex items-center justify-between border-b border-[#142225]">
         
         {/* Left Side (LTR): Action Controls - [Globe] [Theme] [Profile] [Share] [Settings] */}
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           
           {/* 1. Language Toggle Button */}
           <button
             id="language-toggle-btn"
             onClick={toggleLanguage}
-            className="w-8 h-8 sm:w-10 sm:h-10 p-[1.5px] sm:p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-xs sm:shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 p-[2px] rounded-full bg-gradient-to-tr from-emerald-400 to-teal-300 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
             title={isEn ? "Switch to Arabic" : "تغيير اللغة"}
             aria-label="Toggle Language"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
-              <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#34D399]" />
+              <Globe className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-[#34D399]" />
             </div>
           </button>
 
@@ -1107,15 +1107,15 @@ export default function App() {
           <button
             id="theme-toggle-btn"
             onClick={toggleTheme}
-            className="w-8 h-8 sm:w-10 sm:h-10 p-[1.5px] sm:p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-xs sm:shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 p-[2px] rounded-full bg-gradient-to-tr from-amber-400 to-yellow-300 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
             title={isEn ? "Toggle theme" : "الإضاءة والمظهر"}
             aria-label="Toggle Theme"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
               {settings.theme === 'dark' ? (
-                <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FACC15]" />
+                <Sun className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-[#FACC15]" />
               ) : (
-                <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FACC15]" />
+                <Moon className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-[#FACC15]" />
               )}
             </div>
           </button>
@@ -1124,7 +1124,7 @@ export default function App() {
           <button
             id="header-profile-btn"
             onClick={() => handleNavigateToSection('profile')}
-            className={`w-8 h-8 sm:w-10 sm:h-10 p-[1.5px] sm:p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-xs sm:shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer relative flex items-center justify-center shrink-0 ${
+            className={`w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 p-[2px] rounded-full bg-gradient-to-tr from-amber-400 via-emerald-400 to-yellow-300 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer relative flex items-center justify-center shrink-0 ${
               activeSection === 'profile' ? 'ring-2 ring-amber-400 scale-105' : ''
             }`}
             title={isEn ? "Profile & Worship Statistics" : "الملف الشخصي وإحصائيات العبادة"}
@@ -1138,19 +1138,19 @@ export default function App() {
                 referrerPolicy="no-referrer" 
               />
             </div>
-            <span className="absolute bottom-0 right-0 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-500 border border-[#061214] rounded-full animate-pulse" />
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-500 border-2 border-[#061214] rounded-full" />
           </button>
 
           {/* 4. Share App Button */}
           <button
             id="share-app-btn"
             onClick={handleShareApp}
-            className="w-8 h-8 sm:w-10 sm:h-10 p-[1.5px] sm:p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-xs sm:shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 p-[2px] rounded-full bg-gradient-to-tr from-amber-500 to-orange-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
             title={isEn ? "Share App" : "مشاركة التطبيق"}
             aria-label="Share App"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
-              <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FBBF24]" />
+              <Share2 className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-[#FBBF24]" />
             </div>
           </button>
 
@@ -1158,12 +1158,12 @@ export default function App() {
           <button
             id="settings-modal-btn"
             onClick={() => setIsSettingsOpen(true)}
-            className="w-8 h-8 sm:w-10 sm:h-10 p-[1.5px] sm:p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-xs sm:shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 p-[2px] rounded-full bg-gradient-to-tr from-teal-400 to-cyan-300 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
             title={isEn ? "Settings & Controls" : "الإعدادات والتخصيص"}
             aria-label="Settings"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
-              <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2DD4BF]" />
+              <Settings className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-[#2DD4BF]" />
             </div>
           </button>
 
@@ -1185,11 +1185,11 @@ export default function App() {
         {/* Right Side (LTR): Title and Mosque Logo with RTL text rendering */}
         <div 
           onClick={() => handleNavigateToSection(null)}
-          className="flex items-center gap-1.5 sm:gap-3 cursor-pointer hover:opacity-95 active:scale-[0.98] transition-all group shrink-0"
+          className="flex items-center gap-2 sm:gap-3.5 cursor-pointer hover:opacity-95 active:scale-[0.98] transition-all group shrink-0"
           dir="rtl"
           title={isEn ? "Return to main menu" : "العودة للقائمة الرئيسية"}
         >
-          <div className="w-8.5 h-8.5 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-sm sm:shadow-lg shadow-emerald-700/15 overflow-hidden border border-emerald-500/40 sm:border-2 group-hover:rotate-6 transition-all duration-300 shrink-0 bg-emerald-950">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-13 md:h-13 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-700/20 overflow-hidden border-2 border-emerald-500/60 group-hover:rotate-6 transition-all duration-300 shrink-0 bg-emerald-950">
             <img 
               src={settings.appLogoUrl || ISLAMIC_AVATARS.appLogo} 
               alt="Logo" 
@@ -1198,7 +1198,7 @@ export default function App() {
             />
           </div>
           <div className="flex flex-col text-right">
-            <h1 className="text-sm sm:text-2xl font-black text-emerald-950 dark:text-emerald-300 font-kufi tracking-tight leading-tight select-none">
+            <h1 className="text-lg sm:text-2xl md:text-3xl font-black text-emerald-400 dark:text-emerald-300 font-kufi tracking-tight leading-tight select-none">
               {settings.appName || (isEn ? "Noor Al-Islam" : "نور الإسلام")}
             </h1>
           </div>
@@ -1206,7 +1206,7 @@ export default function App() {
       </header>
 
       {/* Main Layout Grid with safe offset for fixed Header */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-3 pt-[calc(max(env(safe-area-inset-top,0px),0px)+3.5rem)] sm:pt-[calc(max(env(safe-area-inset-top,0px),0px)+4rem)]">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-3 pt-[calc(max(env(safe-area-inset-top,0px),0px)+4.75rem)] sm:pt-[calc(max(env(safe-area-inset-top,0px),0px)+5.25rem)]">
         <AnimatePresence mode="wait">
           {activeSection === null ? (
             <motion.div
@@ -1579,16 +1579,16 @@ export default function App() {
       </main>
 
       {/* Persistent Islamic footer dedication */}
-      <footer className="w-full bg-white dark:bg-[#050A0B] border-t border-[#EBE7DF] dark:border-[#132326] py-6 px-4 sm:px-8 text-center text-xs text-slate-500 dark:text-slate-400 space-y-3.5 font-sans mt-6">
+      <footer className="w-full bg-[#050A0B] border-t border-[#132326] py-6 px-4 sm:px-8 text-center text-xs text-slate-400 space-y-3.5 font-sans mt-6 pb-[calc(max(env(safe-area-inset-bottom,0px),16px)+16px)]">
         <div className="max-w-2xl mx-auto space-y-2 leading-relaxed font-semibold">
-          <p className="text-sm sm:text-[15px] text-emerald-900 dark:text-emerald-300 font-extrabold font-amiri">
+          <p className="text-sm sm:text-[15px] text-emerald-300 font-extrabold font-amiri">
             {settings.dedicationText || "هذا التطبيق صدقة جارية بإذن اللّٰه تعالى عن لؤي بن حسين وعن والده رحمه اللّٰه وغفر له وجميع المسلمين والمسلمات الأحياء منهم والأموات."}
           </p>
-          <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500">
+          <p className="text-[11px] sm:text-xs text-slate-500">
             تم التطوير بحبّ وإتقان ليكون تطبيقاً سهلاً، جميلاً وسلساً للمستخدمين. تقبل الله طاعاتكم جميعاً.
           </p>
         </div>
-        <div className="flex flex-wrap justify-center items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 pt-3 border-t border-slate-100 dark:border-slate-900 max-w-xl mx-auto">
+        <div className="flex flex-wrap justify-center items-center gap-3 text-[11px] text-slate-500 pt-3 border-t border-slate-900 max-w-xl mx-auto">
           <span>المطور: {settings.developerName || "لؤي بن حسين"}</span>
           <span>•</span>
           <span>© 2026 - جميع الحقوق محفوظة</span>
@@ -1597,12 +1597,12 @@ export default function App() {
             id="footer-privacy-policy-btn"
             type="button"
             onClick={() => setIsPrivacyModalOpen(true)}
-            className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer"
+            className="text-emerald-400 font-bold hover:underline cursor-pointer"
           >
             {isEn ? "Privacy Policy" : "سياسة الخصوصية"}
           </button>
           <span>•</span>
-          <a href={settings.snapchatUrl || "https://snapchat.com/t/vezdvWWb"} target="_blank" rel="noreferrer" className="text-amber-600 dark:text-amber-400 font-extrabold hover:underline">
+          <a href={settings.snapchatUrl || "https://snapchat.com/t/vezdvWWb"} target="_blank" rel="noreferrer" className="text-amber-400 font-extrabold hover:underline">
             تابعني على سناب شات 👻
           </a>
         </div>
