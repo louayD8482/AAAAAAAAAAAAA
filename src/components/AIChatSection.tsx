@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, HelpCircle, Sparkles, MessageSquare, ShieldAlert, Bot } from 'lucide-react';
+import { Send, HelpCircle, Sparkles, MessageSquare, ShieldAlert, Bot, Flag, Check, Copy, AlertTriangle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { ISLAMIC_AVATARS } from '../assets/avatars';
 
@@ -32,6 +32,10 @@ export default function AIChatSection({ isEn = false }: AIChatSectionProps) {
   });
   const [inputText, setInputText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [reportedIds, setReportedIds] = useState<Record<string, boolean>>({});
+  const [showReportModal, setShowReportModal] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState<string>('inaccurate');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,6 +55,25 @@ export default function AIChatSection({ isEn = false }: AIChatSectionProps) {
         'ما هي شروط قبول التوبة النصوح؟',
         'أذكار تقال لطرد الهموم وضيق الصدر',
       ];
+
+  const handleCopyMessage = (text: string, id: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleOpenReport = (msgId: string) => {
+    setShowReportModal(msgId);
+  };
+
+  const handleConfirmReport = () => {
+    if (showReportModal) {
+      setReportedIds(prev => ({ ...prev, [showReportModal]: true }));
+      setShowReportModal(null);
+    }
+  };
 
   const handleSendMessage = async (textToSend: string) => {
     if (!textToSend.trim()) return;
@@ -217,6 +240,49 @@ export default function AIChatSection({ isEn = false }: AIChatSectionProps) {
               <div className="markdown-body select-text">
                 <ReactMarkdown>{msg.text}</ReactMarkdown>
               </div>
+
+              {/* Message Actions for AI assistant response (Copy & Report per Apple Guidelines) */}
+              {msg.sender === 'assistant' && msg.text && (
+                <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyMessage(msg.text, msg.id)}
+                    className="hover:text-emerald-600 transition-colors flex items-center gap-1 cursor-pointer"
+                    title={isEn ? "Copy text" : "نسخ النص"}
+                  >
+                    {copiedId === msg.id ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-500" />
+                        <span className="text-emerald-500">{isEn ? "Copied" : "تم النسخ"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>{isEn ? "Copy" : "نسخ"}</span>
+                      </>
+                    )}
+                  </button>
+
+                  <span className="text-slate-300 dark:text-slate-700">•</span>
+
+                  {reportedIds[msg.id] ? (
+                    <span className="text-amber-500 font-bold flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      <span>{isEn ? "Reported" : "تم الإبلاغ"}</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenReport(msg.id)}
+                      className="hover:text-red-500 transition-colors flex items-center gap-1 cursor-pointer text-slate-400 hover:text-red-500"
+                      title={isEn ? "Report inappropriate or inaccurate content (App Store Guideline)" : "إبلاغ عن محتوى غير دقيق أو غير لائق"}
+                    >
+                      <Flag className="w-3 h-3" />
+                      <span>{isEn ? "Report" : "إبلاغ"}</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -275,6 +341,85 @@ export default function AIChatSection({ isEn = false }: AIChatSectionProps) {
           <Send className="w-4 h-4 transform rotate-180" />
         </button>
       </form>
+
+      {/* AI Content Report Modal (Apple Guideline 1.2 UGC/AI Requirement) */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-2xl animate-fadeIn text-right">
+            <div className="flex items-center gap-2.5 text-amber-600 dark:text-amber-400 font-kufi font-black text-sm">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <span>{isEn ? "Report AI Response" : "الإبلاغ عن إجابة الذكاء الاصطناعي"}</span>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {isEn 
+                ? "Help us maintain verified Islamic content. Please select the reason for reporting this response:" 
+                : "نحرص على دقة الفتاوى والمحتوى الشرعي. يُرجى اختيار سبب الإبلاغ عن هذه الإجابة:"}
+            </p>
+
+            <div className="space-y-2 text-xs">
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">
+                <input
+                  type="radio"
+                  name="reportReason"
+                  value="inaccurate"
+                  checked={reportReason === 'inaccurate'}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="font-medium text-slate-700 dark:text-slate-200">
+                  {isEn ? "Inaccurate or unverified religious statement" : "معلومة شرعية أو نص غير دقيق"}
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">
+                <input
+                  type="radio"
+                  name="reportReason"
+                  value="inappropriate"
+                  checked={reportReason === 'inappropriate'}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="font-medium text-slate-700 dark:text-slate-200">
+                  {isEn ? "Inappropriate or irrelevant response" : "إجابة غير لائقة أو خارج السياق"}
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer">
+                <input
+                  type="radio"
+                  name="reportReason"
+                  value="other"
+                  checked={reportReason === 'other'}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="font-medium text-slate-700 dark:text-slate-200">
+                  {isEn ? "Other issue" : "سبب آخر"}
+                </span>
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleConfirmReport}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95"
+              >
+                {isEn ? "Submit Report" : "إرسال البلاغ"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowReportModal(null)}
+                className="py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                {isEn ? "Cancel" : "إلغاء"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,7 +6,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
@@ -16,6 +15,11 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// Health check endpoint for Cloud Run
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 
 // Lazy-initialize Gemini client to avoid startup crashes if key is initially empty
 let aiClient: GoogleGenAI | null = null;
@@ -184,177 +188,17 @@ app.get("/api/download-zip", async (req, res) => {
 });
 
 // 4. Standalone Privacy Policy web page for App Store Connect submission
-app.get("/privacy-policy", (req, res) => {
-  const html = `<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>سياسة الخصوصية | تطبيق نور الإسلام</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --primary: #064e3b;
-      --accent: #d97706;
-      --bg: #070d0e;
-      --card-bg: #0c181a;
-      --border: #1a3338;
-      --text: #e2e8f0;
-      --text-muted: #94a3b8;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      line-height: 1.8;
-      padding: 24px 16px;
-    }
-    .container {
-      max-width: 780px;
-      margin: 0 auto;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 32px 24px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    }
-    @media (min-width: 640px) {
-      .container { padding: 48px 40px; }
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 32px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 24px;
-    }
-    .badge {
-      display: inline-block;
-      padding: 4px 12px;
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: #34d399;
-      border-radius: 9999px;
-      font-size: 12px;
-      font-weight: 700;
-      margin-bottom: 12px;
-    }
-    h1 {
-      font-size: 26px;
-      font-weight: 900;
-      color: #fcd34d;
-      margin-bottom: 8px;
-    }
-    .subtitle {
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-    .section {
-      margin-bottom: 24px;
-      background: rgba(255,255,255,0.02);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 16px;
-      padding: 20px;
-    }
-    h2 {
-      font-size: 17px;
-      font-weight: 800;
-      color: #6ee7b7;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    p {
-      font-size: 14px;
-      color: #cbd5e1;
-      line-height: 1.9;
-    }
-    .english-box {
-      direction: ltr;
-      text-align: left;
-      font-family: system-ui, -apple-system, sans-serif;
-      margin-top: 32px;
-      background: rgba(217, 119, 6, 0.08);
-      border: 1px solid rgba(217, 119, 6, 0.25);
-      border-radius: 16px;
-      padding: 24px;
-    }
-    .english-box h3 {
-      color: #f59e0b;
-      font-size: 16px;
-      margin-bottom: 8px;
-    }
-    .english-box p {
-      font-size: 13px;
-      color: #e2e8f0;
-      line-height: 1.6;
-    }
-    .footer {
-      text-align: center;
-      margin-top: 32px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <span class="badge">وثيقة معتمدة ومطابقة لمتجر App Store</span>
-      <h1>سياسة الخصوصية لتطبيق "نور الإسلام"</h1>
-      <p class="subtitle">تاريخ آخر تحديث: 2026</p>
-    </div>
-
-    <div class="section">
-      <h2>مقدمة</h2>
-      <p>نُولي في تطبيق <strong>"نور الإسلام"</strong> اهتماماً بالغاً بخصوصية المستخدمين. توضح هذه السياسة كيف نتعامل مع البيانات والمعلومات عند استخدامك لتطبيقنا على كافة الأجهزة الذكية وأنظمة iOS و iPadOS.</p>
-    </div>
-
-    <div class="section">
-      <h2>جمع البيانات</h2>
-      <p>نحن لا نقوم بجمع أي بيانات شخصية أو حساسة عن المستخدمين (مثل الأسماء، أرقام الهواتف، البريد الإلكتروني، أو المواقع الجغرافية). التطبيق مصمم لتقديم محتوى إسلامي متكامل (أذكار، قرآن كريم، مواقيت صلاة، قبلة، أدعية) دون الحاجة لتسجيل حساب أو تتبع المستخدم على الإطلاق.</p>
-    </div>
-
-    <div class="section">
-      <h2>أذونات الجهاز والمعالجة المحلية</h2>
-      <p>قد يتطلب التطبيق بعض الأذونات الأساسية فقط لعمل بعض الميزات الحيوية (مثل إذن الإشعارات لتنبيهات الصلاة والأذان، أو إذن تحديد الموقع التقديري لحساب المواقيت والقبلة محلياً)، وهذه البيانات تتم معالجتها محلياً بنسبة 100% على جهازك ولا يتم إرسالها أو تخزينها على أي خوادم خارجية.</p>
-    </div>
-
-    <div class="section">
-      <h2>خدمات الأطراف الثالثة</h2>
-      <p>لا نشارك أي معلومات أو بيانات مع أي أطراف ثالثة أو شبكات إعلانية. التطبيق خالٍ تماماً من الإعلانات التجارية المزعجة.</p>
-    </div>
-
-    <div class="section">
-      <h2>التعديلات على السياسة</h2>
-      <p>قد نقوم بتحديث سياسة الخصوصية من وقت لآخر لمواكبة التحديثات التقنية، وسيتم نشر أي تغييرات داخل هذه الصفحة ومباشرة عبر التطبيق.</p>
-    </div>
-
-    <div class="section">
-      <h2>التواصل معنا</h2>
-      <p>إذا كانت لديك أي استفسارات أو ملاحظات حول سياسة الخصوصية، يسعدنا تواصلك مع مطور التطبيق مباشرة.</p>
-    </div>
-
-    <div class="english-box">
-      <h3>App Store Review Compliance Note (English)</h3>
-      <p><strong>App Name:</strong> Noor Al-Islam (نور الإسلام)<br>
-      <strong>Data Collection:</strong> The app does not collect, track, or share any personal user data. All features (Quran recitation, local notifications, prayer times calculation, tasbih) operate entirely on-device with zero external data transmission. No user accounts or login required.</p>
-    </div>
-
-    <div class="footer">
-      <p>تطبيق نور الإسلام - صدقة جارية عن لؤي بن حسين ووالده رحمه الله</p>
-      <p>© 2026 جميع الحقوق محفوظة</p>
-    </div>
-  </div>
-</body>
-</html>`;
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.send(html);
+app.get(["/privacy", "/privacy-policy", "/privacy.html", "/privacy-policy.html"], (req, res) => {
+  const publicPath = path.join(process.cwd(), "public", "privacy.html");
+  const distPath = path.join(process.cwd(), "dist", "privacy.html");
+  if (fs.existsSync(publicPath)) {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.sendFile(publicPath);
+  } else if (fs.existsSync(distPath)) {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.sendFile(distPath);
+  }
+  res.redirect("/");
 });
 
 // Serve static assets from public folder directly
@@ -363,6 +207,7 @@ app.use(express.static(path.join(process.cwd(), "public")));
 // Serve static files / Vite middleware
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

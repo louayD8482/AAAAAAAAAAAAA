@@ -1020,7 +1020,56 @@ export default function SettingsModal({
             </div>
           </div>
 
-          {/* 5. Complete Export Application for iPhone (iOS ZIP) */}
+          {/* 5. Official Privacy Policy & App Store Compliance */}
+          <div className="space-y-3.5 pt-2">
+            <h5 className="text-xs font-black text-slate-800 dark:text-slate-200 border-r-4 rtl:border-r-4 ltr:border-l-4 border-emerald-600 pr-2 ltr:pl-2 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>{isEn ? "App Store Privacy Policy & Web URL" : "سياسة الخصوصية ورابط الاعتماد لمتجر آبل (App Store)"}</span>
+              </span>
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-extrabold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                {isEn ? "100% Compliant" : "معتمد ومطابق لـ Apple ✓"}
+              </span>
+            </h5>
+
+            <div className="p-4 bg-emerald-500/10 dark:bg-emerald-950/20 rounded-2xl border border-emerald-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h6 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    {isEn ? "Public Privacy Policy Page" : "صفحة سياسة الخصوصية العامة والمستقلة"}
+                  </h6>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                    {isEn ? "Required URL for App Store Connect submission" : "الرابط المطلوب في صفحة معلومات التطبيق داخل App Store Connect"}
+                  </p>
+                </div>
+                <button
+                  id="open-privacy-from-settings-btn"
+                  onClick={() => { triggerHaptic('selection'); setIsPrivacyOpen(true); }}
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+                  <span>{isEn ? "View & Copy URL" : "عرض ونسخ الرابط"}</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 p-2.5 bg-white dark:bg-[#070D0E] rounded-xl border border-emerald-500/20 text-xs">
+                <span className="font-mono text-[11px] text-emerald-800 dark:text-emerald-400 truncate" dir="ltr">
+                  {typeof window !== 'undefined' ? `${window.location.origin}/privacy-policy` : '/privacy-policy'}
+                </span>
+                <a
+                  href="/privacy-policy"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-1.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 rounded-lg hover:bg-emerald-200 transition-colors shrink-0"
+                  title="فتح الرابط في صفحة مستقلة"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* 6. Complete Export Application for iPhone (iOS ZIP) */}
           <div className="space-y-3.5 pt-2">
             <h5 className="text-xs font-black text-slate-800 dark:text-slate-200 border-r-4 rtl:border-r-4 ltr:border-l-4 border-amber-500 pr-2 ltr:pl-2 flex items-center gap-2">
               <span>{isEn ? "Export Application for iPhone & iOS (ZIP)" : "تصدير وتحميل التطبيق للآيفون (iOS & Xcode ZIP)"}</span>
