@@ -1,0 +1,23 @@
+{
+  "short_name": "نور الإسلام",
+  "name": "نور الإسلام - مواقيت الصلاة والقرآن",
+  "icons": [
+    {
+      "src": "/app-icon.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/app-icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#070D0E",
+  "theme_color": "#070D0E",
+  "display": "standalone",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar"
+}

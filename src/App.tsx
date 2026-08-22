@@ -61,9 +61,9 @@ import VerseOfTheDay from './components/VerseOfTheDay';
 import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
 import ProfileSection from './components/ProfileSection';
 import EhsanIslamicPlatformSection from './components/EhsanIslamicPlatformSection';
-import WelcomeSplashScreen from './components/WelcomeSplashScreen';
 import MakkahLiveRadioPlayer from './components/MakkahLiveRadioPlayer';
 import UnifiedSearchFavoritesModal from './components/UnifiedSearchFavoritesModal';
+import WelcomeOnboardingModal from './components/WelcomeOnboardingModal';
 import { ISLAMIC_AVATARS } from './assets/avatars';
 import { requestAllPermissions, scheduleAllNativeNotifications, checkPermissionsStatus } from './utils/nativeNotifications';
 import { playAdhanAudio, stopAdhanAudio, playPrePrayerChime, playIqamaChime } from './utils/adhanPlayer';
@@ -112,8 +112,8 @@ const PRAYERS_INFO = {
 export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSearchFavModalOpen, setIsSearchFavModalOpen] = useState<boolean>(false);
-  const [showWelcomeSplash, setShowWelcomeSplash] = useState<boolean>(() => {
-    return safeStorage.getItem('noor_hide_welcome_splash') !== 'true';
+  const [showWelcomeOnboarding, setShowWelcomeOnboarding] = useState<boolean>(() => {
+    return safeStorage.getItem('noor_has_seen_welcome_onboarding') !== 'true';
   });
   const [activeAdhanAlert, setActiveAdhanAlert] = useState<{
     prayerName: string;
@@ -1084,9 +1084,8 @@ export default function App() {
       className="min-h-screen bg-[#FCFAF6] dark:bg-[#070D0E] text-slate-800 dark:text-[#E2EAEB] transition-colors duration-500 flex flex-col font-sans islamic-pattern"
       dir={isEn ? "ltr" : "rtl"}
     >
-      {/* Main Premium App Bar with iOS Native Safe-Area & Dynamic Island handling (Only shown inside the app, never on the welcome splash screen) */}
-      {!showWelcomeSplash && (
-        <header className="top-bar px-3 sm:px-8 py-2 flex items-center justify-between border-b border-[#EBE7DF] dark:border-[#142225]">
+      {/* Main Premium App Bar with iOS Native Safe-Area & Dynamic Island handling */}
+      <header className="top-bar px-3 sm:px-8 py-2 flex items-center justify-between border-b border-[#EBE7DF] dark:border-[#142225]">
         
         {/* Left Side (LTR): Action Controls - [Globe] [Theme] [Profile] [Share] [Settings] */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -1205,10 +1204,8 @@ export default function App() {
           </div>
         </div>
       </header>
-      )}
 
       {/* Main Layout Grid with safe offset for fixed Header */}
-      {!showWelcomeSplash && (
       <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-3 pt-[calc(max(env(safe-area-inset-top,0px),0px)+4rem)] sm:pt-[calc(max(env(safe-area-inset-top,0px),0px)+4.25rem)]">
         <AnimatePresence mode="wait">
           {activeSection === null ? (
@@ -1580,55 +1577,36 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
-      )}
 
       {/* Persistent Islamic footer dedication */}
-      {!showWelcomeSplash && (
-        <footer className="w-full bg-white dark:bg-[#050A0B] border-t border-[#EBE7DF] dark:border-[#132326] py-6 px-4 sm:px-8 text-center text-xs text-slate-500 dark:text-slate-400 space-y-3.5 font-sans mt-6">
-          <div className="max-w-2xl mx-auto space-y-2 leading-relaxed font-semibold">
-            <p className="text-sm sm:text-[15px] text-emerald-900 dark:text-emerald-300 font-extrabold font-amiri">
-              {settings.dedicationText || "هذا التطبيق صدقة جارية بإذن اللّٰه تعالى عن لؤي بن حسين وعن والده رحمه اللّٰه وغفر له وجميع المسلمين والمسلمات الأحياء منهم والأموات."}
-            </p>
-            <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500">
-              تم التطوير بحبّ وإتقان ليكون تطبيقاً سهلاً، جميلاً وسلساً للمستخدمين. تقبل الله طاعاتكم جميعاً.
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 pt-3 border-t border-slate-100 dark:border-slate-900 max-w-xl mx-auto">
-            <span>المطور: {settings.developerName || "لؤي بن حسين"}</span>
-            <span>•</span>
-            <span>© 2026 - جميع الحقوق محفوظة</span>
-            <span>•</span>
-            <button
-              id="footer-privacy-policy-btn"
-              type="button"
-              onClick={() => setIsPrivacyModalOpen(true)}
-              className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer"
-            >
-              {isEn ? "Privacy Policy" : "سياسة الخصوصية"}
-            </button>
-            <span>•</span>
-            <a href={settings.snapchatUrl || "https://snapchat.com/t/vezdvWWb"} target="_blank" rel="noreferrer" className="text-amber-600 dark:text-amber-400 font-extrabold hover:underline">
-              تابعني على سناب شات 👻
-            </a>
-          </div>
-        </footer>
-      )}
-
-      {/* Welcome Splash Screen on app open */}
-      <AnimatePresence>
-        {showWelcomeSplash && (
-          <WelcomeSplashScreen
-            settings={settings}
-            isEn={isEn}
-            onEnter={(secId) => {
-              setShowWelcomeSplash(false);
-              if (secId) {
-                handleNavigateToSection(secId);
-              }
-            }}
-          />
-        )}
-      </AnimatePresence>
+      <footer className="w-full bg-white dark:bg-[#050A0B] border-t border-[#EBE7DF] dark:border-[#132326] py-6 px-4 sm:px-8 text-center text-xs text-slate-500 dark:text-slate-400 space-y-3.5 font-sans mt-6">
+        <div className="max-w-2xl mx-auto space-y-2 leading-relaxed font-semibold">
+          <p className="text-sm sm:text-[15px] text-emerald-900 dark:text-emerald-300 font-extrabold font-amiri">
+            {settings.dedicationText || "هذا التطبيق صدقة جارية بإذن اللّٰه تعالى عن لؤي بن حسين وعن والده رحمه اللّٰه وغفر له وجميع المسلمين والمسلمات الأحياء منهم والأموات."}
+          </p>
+          <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500">
+            تم التطوير بحبّ وإتقان ليكون تطبيقاً سهلاً، جميلاً وسلساً للمستخدمين. تقبل الله طاعاتكم جميعاً.
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-center items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 pt-3 border-t border-slate-100 dark:border-slate-900 max-w-xl mx-auto">
+          <span>المطور: {settings.developerName || "لؤي بن حسين"}</span>
+          <span>•</span>
+          <span>© 2026 - جميع الحقوق محفوظة</span>
+          <span>•</span>
+          <button
+            id="footer-privacy-policy-btn"
+            type="button"
+            onClick={() => setIsPrivacyModalOpen(true)}
+            className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer"
+          >
+            {isEn ? "Privacy Policy" : "سياسة الخصوصية"}
+          </button>
+          <span>•</span>
+          <a href={settings.snapchatUrl || "https://snapchat.com/t/vezdvWWb"} target="_blank" rel="noreferrer" className="text-amber-600 dark:text-amber-400 font-extrabold hover:underline">
+            تابعني على سناب شات 👻
+          </a>
+        </div>
+      </footer>
 
       {/* Settings Modal (including Developer & Dedication at top) */}
       <SettingsModal
@@ -1671,6 +1649,23 @@ export default function App() {
         allPrayers={computedPrayers.map(p => ({ name: p.name, arabicName: p.arabicName, time: p.time }))}
         isEn={isEn}
       />
+
+      {/* One-time Welcome Onboarding Modal (shows only on initial installation/launch) */}
+      <AnimatePresence>
+        {showWelcomeOnboarding && (
+          <WelcomeOnboardingModal
+            isEn={isEn}
+            onEnter={(secId) => {
+              safeStorage.setItem('noor_has_seen_welcome_onboarding', 'true');
+              safeStorage.setItem('noor_hide_welcome_splash', 'true');
+              setShowWelcomeOnboarding(false);
+              if (secId) {
+                handleNavigateToSection(secId);
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
       {/* Landscape Orientation Lock Screen overlay for mobile devices */}
       <AnimatePresence>
         {isLandscape && (

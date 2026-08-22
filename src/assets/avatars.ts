@@ -29,6 +29,7 @@ export const ISLAMIC_AVATARS = {
   charity: driveAvatar,
   drive: driveAvatar,
   appLogo: appLogoAvatar,
+  appMainIcon: appLogoAvatar,
   lang: langAvatar,
   theme: themeAvatar,
   share: shareAvatar,
