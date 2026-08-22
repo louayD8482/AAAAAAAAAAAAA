@@ -63,7 +63,7 @@ import ProfileSection from './components/ProfileSection';
 import EhsanIslamicPlatformSection from './components/EhsanIslamicPlatformSection';
 import MakkahLiveRadioPlayer from './components/MakkahLiveRadioPlayer';
 import UnifiedSearchFavoritesModal from './components/UnifiedSearchFavoritesModal';
-import WelcomeOnboardingModal from './components/WelcomeOnboardingModal';
+import WelcomeSplashScreen from './components/WelcomeSplashScreen';
 import { ISLAMIC_AVATARS } from './assets/avatars';
 import { requestAllPermissions, scheduleAllNativeNotifications, checkPermissionsStatus } from './utils/nativeNotifications';
 import { playAdhanAudio, stopAdhanAudio, playPrePrayerChime, playIqamaChime } from './utils/adhanPlayer';
@@ -112,8 +112,8 @@ const PRAYERS_INFO = {
 export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSearchFavModalOpen, setIsSearchFavModalOpen] = useState<boolean>(false);
-  const [showWelcomeOnboarding, setShowWelcomeOnboarding] = useState<boolean>(() => {
-    return safeStorage.getItem('noor_has_seen_welcome_onboarding') !== 'true';
+  const [showWelcomeSplash, setShowWelcomeSplash] = useState<boolean>(() => {
+    return safeStorage.getItem('noor_hide_welcome_splash') !== 'true' && safeStorage.getItem('noor_has_seen_welcome_onboarding') !== 'true';
   });
   const [activeAdhanAlert, setActiveAdhanAlert] = useState<{
     prayerName: string;
@@ -1085,21 +1085,21 @@ export default function App() {
       dir={isEn ? "ltr" : "rtl"}
     >
       {/* Main Premium App Bar with iOS Native Safe-Area & Dynamic Island handling */}
-      <header className="top-bar px-3 sm:px-8 py-2 flex items-center justify-between border-b border-[#EBE7DF] dark:border-[#142225]">
+      <header className="top-bar px-2 sm:px-6 lg:px-8 py-1.5 flex items-center justify-between border-b border-[#EBE7DF] dark:border-[#142225]">
         
         {/* Left Side (LTR): Action Controls - [Globe] [Theme] [Profile] [Share] [Settings] */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           
           {/* 1. Language Toggle Button */}
           <button
             id="language-toggle-btn"
             onClick={toggleLanguage}
-            className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 p-[1.5px] sm:p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-xs sm:shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
             title={isEn ? "Switch to Arabic" : "تغيير اللغة"}
             aria-label="Toggle Language"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
-              <Globe className="w-4 h-4 text-[#34D399]" />
+              <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#34D399]" />
             </div>
           </button>
 
@@ -1107,15 +1107,15 @@ export default function App() {
           <button
             id="theme-toggle-btn"
             onClick={toggleTheme}
-            className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 p-[1.5px] sm:p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-xs sm:shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
             title={isEn ? "Toggle theme" : "الإضاءة والمظهر"}
             aria-label="Toggle Theme"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
               {settings.theme === 'dark' ? (
-                <Sun className="w-4 h-4 text-[#FACC15]" />
+                <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FACC15]" />
               ) : (
-                <Moon className="w-4 h-4 text-[#FACC15]" />
+                <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FACC15]" />
               )}
             </div>
           </button>
@@ -1124,7 +1124,7 @@ export default function App() {
           <button
             id="header-profile-btn"
             onClick={() => handleNavigateToSection('profile')}
-            className={`w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer relative flex items-center justify-center shrink-0 ${
+            className={`w-8 h-8 sm:w-10 sm:h-10 p-[1.5px] sm:p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-xs sm:shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer relative flex items-center justify-center shrink-0 ${
               activeSection === 'profile' ? 'ring-2 ring-amber-400 scale-105' : ''
             }`}
             title={isEn ? "Profile & Worship Statistics" : "الملف الشخصي وإحصائيات العبادة"}
@@ -1138,19 +1138,19 @@ export default function App() {
                 referrerPolicy="no-referrer" 
               />
             </div>
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border border-[#061214] rounded-full animate-pulse" />
+            <span className="absolute bottom-0 right-0 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-500 border border-[#061214] rounded-full animate-pulse" />
           </button>
 
           {/* 4. Share App Button */}
           <button
             id="share-app-btn"
             onClick={handleShareApp}
-            className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 p-[1.5px] sm:p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-xs sm:shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
             title={isEn ? "Share App" : "مشاركة التطبيق"}
             aria-label="Share App"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
-              <Share2 className="w-4 h-4 text-[#FBBF24]" />
+              <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FBBF24]" />
             </div>
           </button>
 
@@ -1158,12 +1158,12 @@ export default function App() {
           <button
             id="settings-modal-btn"
             onClick={() => setIsSettingsOpen(true)}
-            className="w-10 h-10 p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 p-[1.5px] sm:p-[2px] rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 shadow-xs sm:shadow-md transition-all active:scale-90 hover:scale-105 cursor-pointer flex items-center justify-center shrink-0"
             title={isEn ? "Settings & Controls" : "الإعدادات والتخصيص"}
             aria-label="Settings"
           >
             <div className="w-full h-full rounded-full bg-[#061214] flex items-center justify-center">
-              <Settings className="w-4 h-4 text-[#2DD4BF]" />
+              <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2DD4BF]" />
             </div>
           </button>
 
@@ -1185,11 +1185,11 @@ export default function App() {
         {/* Right Side (LTR): Title and Mosque Logo with RTL text rendering */}
         <div 
           onClick={() => handleNavigateToSection(null)}
-          className="flex items-center gap-2.5 sm:gap-3.5 cursor-pointer hover:opacity-95 active:scale-[0.98] transition-all group shrink-0"
+          className="flex items-center gap-1.5 sm:gap-3 cursor-pointer hover:opacity-95 active:scale-[0.98] transition-all group shrink-0"
           dir="rtl"
           title={isEn ? "Return to main menu" : "العودة للقائمة الرئيسية"}
         >
-          <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-700/15 overflow-hidden border-2 border-emerald-500/40 group-hover:rotate-6 transition-all duration-300 shrink-0 bg-emerald-950">
+          <div className="w-8.5 h-8.5 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-sm sm:shadow-lg shadow-emerald-700/15 overflow-hidden border border-emerald-500/40 sm:border-2 group-hover:rotate-6 transition-all duration-300 shrink-0 bg-emerald-950">
             <img 
               src={settings.appLogoUrl || ISLAMIC_AVATARS.appLogo} 
               alt="Logo" 
@@ -1197,8 +1197,8 @@ export default function App() {
               referrerPolicy="no-referrer" 
             />
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-emerald-950 dark:text-emerald-300 font-kufi tracking-tight leading-tight select-none">
+          <div className="flex flex-col text-right">
+            <h1 className="text-sm sm:text-2xl font-black text-emerald-950 dark:text-emerald-300 font-kufi tracking-tight leading-tight select-none">
               {settings.appName || (isEn ? "Noor Al-Islam" : "نور الإسلام")}
             </h1>
           </div>
@@ -1206,7 +1206,7 @@ export default function App() {
       </header>
 
       {/* Main Layout Grid with safe offset for fixed Header */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-3 pt-[calc(max(env(safe-area-inset-top,0px),0px)+4rem)] sm:pt-[calc(max(env(safe-area-inset-top,0px),0px)+4.25rem)]">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-3 pt-[calc(max(env(safe-area-inset-top,0px),0px)+3.5rem)] sm:pt-[calc(max(env(safe-area-inset-top,0px),0px)+4rem)]">
         <AnimatePresence mode="wait">
           {activeSection === null ? (
             <motion.div
@@ -1650,15 +1650,13 @@ export default function App() {
         isEn={isEn}
       />
 
-      {/* One-time Welcome Onboarding Modal (shows only on initial installation/launch) */}
+      {/* Welcome Splash Screen on app launch */}
       <AnimatePresence>
-        {showWelcomeOnboarding && (
-          <WelcomeOnboardingModal
+        {showWelcomeSplash && (
+          <WelcomeSplashScreen
             isEn={isEn}
             onEnter={(secId) => {
-              safeStorage.setItem('noor_has_seen_welcome_onboarding', 'true');
-              safeStorage.setItem('noor_hide_welcome_splash', 'true');
-              setShowWelcomeOnboarding(false);
+              setShowWelcomeSplash(false);
               if (secId) {
                 handleNavigateToSection(secId);
               }
