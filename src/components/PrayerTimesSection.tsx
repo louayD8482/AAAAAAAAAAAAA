@@ -4,11 +4,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Clock, MapPin, Bell, BellOff, CheckCircle2, Volume2, Eye, EyeOff, Sparkles, RefreshCw } from 'lucide-react';
+import { Clock, MapPin, Bell, BellOff, CheckCircle2, Volume2, Eye, EyeOff, Sparkles, RefreshCw, BarChart2 } from 'lucide-react';
 import { AppSettings, PrayerTime, PrayerStatus } from '../types';
 import { PRAYER_COUNTRIES, getAccuratePrayerTimes } from '../data/prayerCities';
 import { formatTime12 } from '../utils/formatTime';
 import { safeStorage } from '../utils/safeStorage';
+import { triggerHaptic } from '../utils/nativeBridge';
+import { MonthlyPrayerCompareChart } from './MonthlyPrayerCompareChart';
 
 interface PrayerTimesSectionProps {
   settings: AppSettings;
@@ -185,16 +187,25 @@ export default function PrayerTimesSection({ settings, onUpdateSettings, onTrigg
   // Persist prayer tracker checkoffs
   const handleToggleCheck = (pName: string) => {
     const key = pName.toLowerCase() as keyof typeof todayChecklist;
+    const isNowChecked = !todayChecklist[key];
     const updated = {
       ...todayChecklist,
-      [key]: !todayChecklist[key]
+      [key]: isNowChecked
     };
     setTodayChecklist(updated);
+    
+    // Fine-grained haptic feedback for prayer checkbox
+    const allFiveChecked = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].every(k => updated[k as keyof typeof updated]);
+    if (allFiveChecked && isNowChecked) {
+      triggerHaptic('success');
+    } else {
+      triggerHaptic('prayer-check');
+    }
     
     const todayStr = new Date().toISOString().split('T')[0];
     safeStorage.setItem(`prayer_checklist_${todayStr}`, JSON.stringify(updated));
 
-    if (settings.soundEnabled && updated[key]) {
+    if (settings.soundEnabled && isNowChecked) {
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -451,6 +462,9 @@ export default function PrayerTimesSection({ settings, onUpdateSettings, onTrigg
           </div>
         </div>
       </div>
+
+      {/* Monthly Prayer Commitment Comparison Chart */}
+      <MonthlyPrayerCompareChart isEn={isEn} />
     </div>
   );
 }

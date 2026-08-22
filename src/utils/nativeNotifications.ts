@@ -84,7 +84,7 @@ export const registerRichNotificationActionTypes = async () => {
 };
 
 /**
- * Request notification permissions for Native iOS and Android apps
+ * Request notification permissions across iOS, Android, and Web with native iOS handling
  */
 export const requestAllPermissions = async (): Promise<boolean> => {
   try {
@@ -106,8 +106,8 @@ export const requestAllPermissions = async (): Promise<boolean> => {
           id: 'adhan_channel',
           name: 'تنبيهات الأذان ومواقيت الصلاة (الأذان الحقيقي)',
           description: 'إشعارات الأذان المسموعة والكاملة عند دخول أوقات الصلوات الخمس مع صوت المؤذن المختار',
-          importance: 5,
-          visibility: 1,
+          importance: 5, // High / Max importance for lockscreen alert
+          visibility: 1, // Public visibility on lockscreen
           sound: 'adhan_makkah.wav',
           vibration: true,
           lights: true,
@@ -126,10 +126,13 @@ export const requestAllPermissions = async (): Promise<boolean> => {
           lightColor: '#f59e0b'
         });
       } catch (channelErr) {
-        // Channels are Android specific; on iOS handled by APNs / UserNotifications
+        // Channels are Android specific; on iOS this is handled seamlessly by APNs / UserNotifications
       }
 
       return permStatus.display === 'granted';
+    } else if (typeof window !== 'undefined' && 'Notification' in window) {
+      const perm = await Notification.requestPermission();
+      return perm === 'granted';
     }
   } catch (err) {
     console.warn('iOS / Native Notification permission request error:', err);
@@ -138,7 +141,7 @@ export const requestAllPermissions = async (): Promise<boolean> => {
 };
 
 /**
- * Check current notification permission status for Native Apps
+ * Check current notification permission status
  */
 export const checkPermissionsStatus = async (): Promise<'granted' | 'denied' | 'prompt'> => {
   try {
@@ -146,6 +149,10 @@ export const checkPermissionsStatus = async (): Promise<'granted' | 'denied' | '
       const status = await LocalNotifications.checkPermissions();
       if (status.display === 'granted') return 'granted';
       if (status.display === 'denied') return 'denied';
+      return 'prompt';
+    } else if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') return 'granted';
+      if (Notification.permission === 'denied') return 'denied';
       return 'prompt';
     }
   } catch (err) {
@@ -156,6 +163,7 @@ export const checkPermissionsStatus = async (): Promise<'granted' | 'denied' | '
 
 /**
  * Schedule Native Background Lock-screen Push Notifications for iOS / iPhone & Android
+ * Formatted with Rich Notification attributes (distinct titles, sound, icons, and lockscreen preview actions)
  */
 export const scheduleAllNativeNotifications = async (
   prayers: PrayerTime[],
@@ -262,7 +270,7 @@ export const scheduleAllNativeNotifications = async (
         if (!prayer.time) return;
         const [pHour, pMin] = prayer.time.split(':').map(Number);
 
-        // A. Pre-Prayer Early Reminder
+        // A. Pre-Prayer Early Reminder (e.g., 5 mins before) with rich action button
         if (prayer.name !== 'Sunrise' && (settings.prePrayerReminder !== false)) {
           const preTime = new Date(targetDate);
           preTime.setHours(pHour, pMin - preOffsetMin, 0, 0);
@@ -285,32 +293,46 @@ export const scheduleAllNativeNotifications = async (
           }
         }
 
-        // B. Exact Adhan Moment Alert
+        // B. Exact Adhan Moment Alert with selected voice/tone per prayer & Rich Actions + iOS Critical Alert category
         if (settings.adhanReminder) {
           const exactTime = new Date(targetDate);
           exactTime.setHours(pHour, pMin, 0, 0);
 
           if (exactTime.getTime() > Date.now()) {
-            const adhanData = getAdhanNotification(prayer.name, prayer.arabicName);
-            notificationsToSchedule.push({
-              id: notifIdCounter++,
-              title: adhanData.title,
-              body: adhanData.body,
-              schedule: { at: exactTime },
-              sound: adhanSoundFile,
-              channelId: 'adhan_channel',
-              smallIcon: 'ic_stat_icon',
-              iconColor: '#10b981',
-              actionTypeId: 'ADHAN_ACTIONS',
-              category: 'CRITICAL_ADHAN_CATEGORY',
-              critical: true,
-              volume: 1.0,
-              extra: { prayer: prayer.name, type: 'adhan', voice: settings.selectedAdhanVoice }
-            });
+            const prayerPref = settings.prayerSoundPreferences?.[prayer.name as keyof typeof settings.prayerSoundPreferences] || 'full_adhan';
+            
+            // If user set this specific prayer to silent, skip
+            if (prayerPref !== 'silent') {
+              const adhanData = getAdhanNotification(prayer.name, prayer.arabicName);
+              
+              // Determine sound file based on per-prayer preference
+              let resolvedSound = adhanSoundFile;
+              if (prayerPref === 'soft_chime') {
+                resolvedSound = 'soft_chime.wav';
+              } else if (prayerPref === 'takbeer_only') {
+                resolvedSound = 'adhan_takbeer.wav';
+              }
+
+              notificationsToSchedule.push({
+                id: notifIdCounter++,
+                title: adhanData.title,
+                body: adhanData.body,
+                schedule: { at: exactTime },
+                sound: resolvedSound, // Dynamic per-prayer chosen sound (full adhan, soft chime, takbeer)
+                channelId: 'adhan_channel',
+                smallIcon: 'ic_stat_icon',
+                iconColor: '#10b981',
+                actionTypeId: 'ADHAN_ACTIONS',
+                category: 'CRITICAL_ADHAN_CATEGORY', // iOS Critical Alert custom category
+                critical: prayerPref === 'full_adhan', // Native iOS & Android critical notification flag
+                volume: 1.0,
+                extra: { prayer: prayer.name, type: 'adhan', voice: settings.selectedAdhanVoice, pref: prayerPref }
+              });
+            }
           }
         }
 
-        // C. Iqama & Sunnah Follow-up
+        // C. Iqama & Sunnah Follow-up (10 mins after)
         if (prayer.name !== 'Sunrise' && (settings.iqamaReminder !== false)) {
           const iqamaTime = new Date(targetDate);
           iqamaTime.setHours(pHour, pMin + iqamaOffsetMin, 0, 0);
@@ -333,7 +355,7 @@ export const scheduleAllNativeNotifications = async (
         }
       });
 
-      // D. Sleep Azkar Notification
+      // D. Sleep Azkar Notification (Every night at 09:32 PM)
       const sleepAzkarTime = new Date(targetDate);
       sleepAzkarTime.setHours(21, 32, 0, 0);
       if (sleepAzkarTime.getTime() > Date.now()) {
@@ -350,7 +372,7 @@ export const scheduleAllNativeNotifications = async (
         });
       }
 
-      // E. Morning Azkar
+      // E. Morning Azkar (06:30 AM)
       if (settings.azkarReminder && (settings.morningAzkarReminder !== false)) {
         const morningAzkarTime = new Date(targetDate);
         morningAzkarTime.setHours(6, 30, 0, 0);
@@ -369,7 +391,7 @@ export const scheduleAllNativeNotifications = async (
         }
       }
 
-      // F. Evening Azkar
+      // F. Evening Azkar (05:00 PM)
       if (settings.azkarReminder && (settings.eveningAzkarReminder !== false)) {
         const eveningAzkarTime = new Date(targetDate);
         eveningAzkarTime.setHours(17, 0, 0, 0);
@@ -388,7 +410,7 @@ export const scheduleAllNativeNotifications = async (
         }
       }
 
-      // G. Friday Surah Al-Kahf
+      // G. Friday Surah Al-Kahf (Every Friday at 09:00 AM)
       if (targetDate.getDay() === 5 && (settings.fridayKahfReminder !== false)) {
         const fridayTime = new Date(targetDate);
         fridayTime.setHours(9, 0, 0, 0);
@@ -407,7 +429,7 @@ export const scheduleAllNativeNotifications = async (
         }
       }
 
-      // H. Tahajjud & Witr
+      // H. Tahajjud & Witr (03:30 AM)
       if (settings.tahajjudReminder !== false) {
         const tahajjudTime = new Date(targetDate);
         tahajjudTime.setHours(3, 30, 0, 0);
@@ -422,6 +444,28 @@ export const scheduleAllNativeNotifications = async (
             iconColor: '#6366f1',
             actionTypeId: 'AZKAR_ACTIONS',
             extra: { type: 'tahajjud' }
+          });
+        }
+      }
+
+      // I. Daily Quran Wird Reminder (Custom user selected time)
+      if (settings.quranWirdReminder) {
+        const wirdTimeStr = settings.quranWirdTime || '20:00';
+        const [wHours, wMins] = wirdTimeStr.split(':').map(Number);
+        const wirdTargetTime = new Date(targetDate);
+        wirdTargetTime.setHours(wHours, wMins, 0, 0);
+
+        if (wirdTargetTime.getTime() > Date.now()) {
+          notificationsToSchedule.push({
+            id: notifIdCounter++,
+            title: '📖 تذكير الورد القرآني اليومي',
+            body: '«اقْرَؤُوا القُرْآنَ فإنَّه يَأْتي يَومَ القِيامَةِ شَفِيعًا لأَصْحابِهِ».. حان وقت وردك من كتاب الله المبارك.',
+            schedule: { at: wirdTargetTime },
+            channelId: 'azkar_channel',
+            sound: 'beep.wav',
+            iconColor: '#10b981',
+            actionTypeId: 'AZKAR_ACTIONS',
+            extra: { type: 'quran_wird' }
           });
         }
       }

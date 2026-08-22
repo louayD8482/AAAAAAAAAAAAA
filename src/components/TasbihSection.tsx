@@ -23,6 +23,7 @@ import {
   Target
 } from 'lucide-react';
 import { safeStorage } from '../utils/safeStorage';
+import { triggerHaptic } from '../utils/nativeBridge';
 
 interface DhikrItem {
   id: string;
@@ -269,21 +270,9 @@ export default function TasbihSection({ soundEnabled = true, isEn = false }: Tas
     }
   };
 
-  // Haptic feedback
-  const triggerHaptic = () => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try {
-        navigator.vibrate(15);
-      } catch {
-        // ignore
-      }
-    }
-  };
-
   // Handle Main Tasbih Tap
   const handleTasbihTap = () => {
     playClickSound();
-    triggerHaptic();
 
     const nextCount = count + 1;
     
@@ -297,16 +286,18 @@ export default function TasbihSection({ soundEnabled = true, isEn = false }: Tas
       setCount(0);
       setCompletedRounds(prev => prev + 1);
       playCompleteSound();
+      triggerHaptic('success');
       setShowCelebrate(true);
       setTimeout(() => setShowCelebrate(false), 2000);
     } else {
       setCount(nextCount);
+      triggerHaptic('tasbih');
     }
   };
 
   const handleReset = () => {
     setCount(0);
-    triggerHaptic();
+    triggerHaptic('warning');
   };
 
   const handleSelectDhikr = (item: DhikrItem) => {

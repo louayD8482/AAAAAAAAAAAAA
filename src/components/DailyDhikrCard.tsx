@@ -17,6 +17,7 @@ import {
   Award
 } from 'lucide-react';
 import { safeStorage } from '../utils/safeStorage';
+import { triggerHaptic } from '../utils/nativeBridge';
 
 interface DailyDhikrItem {
   id: number;
@@ -139,11 +140,18 @@ export default function DailyDhikrCard({ isEn = false }: DailyDhikrCardProps) {
   }, [recitedCount, storageKey]);
 
   const handleIncrement = () => {
-    setRecitedCount(prev => prev + 1);
+    const next = recitedCount + 1;
+    setRecitedCount(next);
+    if (next >= todayDhikr.targetCount) {
+      triggerHaptic('success');
+    } else {
+      triggerHaptic('tasbih');
+    }
   };
 
   const handleReset = (e: React.MouseEvent) => {
     e.stopPropagation();
+    triggerHaptic('warning');
     setRecitedCount(0);
   };
 

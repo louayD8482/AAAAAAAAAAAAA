@@ -23,7 +23,11 @@ import {
   Settings2, 
   Smartphone,
   ExternalLink,
-  RotateCcw
+  RotateCcw,
+  Shield,
+  Database,
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { AppSettings } from '../types';
 import { PRAYER_COUNTRIES } from '../data/prayerCities';
@@ -31,7 +35,8 @@ import { downloadProjectZip } from '../utils/zipExporter';
 import { ADHAN_VOICES } from '../utils/nativeNotifications';
 import { playAdhanAudio, stopAdhanAudio, playPrePrayerChime, isAdhanPlaying } from '../utils/adhanPlayer';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
-import { Shield } from 'lucide-react';
+import { triggerHaptic } from '../utils/nativeBridge';
+import { safeStorage } from '../utils/safeStorage';
 // @ts-ignore
 import defaultLogo from '../assets/images/app_logo_1784266160080.jpg';
 // @ts-ignore
@@ -64,6 +69,56 @@ export default function SettingsModal({
   const [isExportingZip, setIsExportingZip] = useState(false);
   const [exportProgress, setExportProgress] = useState<{ percent: number; status: string }>({ percent: 0, status: '' });
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [storageFeedback, setStorageFeedback] = useState<string | null>(null);
+  const [confirmClearType, setConfirmClearType] = useState<'notifications' | 'streaks' | 'allCache' | null>(null);
+
+  const handleClearNotificationsCache = () => {
+    triggerHaptic('warning');
+    safeStorage.removeItem('noor_cached_notifications');
+    safeStorage.removeItem('noor_scheduled_notifications_log');
+    setConfirmClearType(null);
+    setStorageFeedback(isEn ? 'Notification cache cleared successfully' : 'تم مسح سجل الإشعارات المؤقتة بنجاح ✓');
+    setTimeout(() => setStorageFeedback(null), 3000);
+  };
+
+  const handleClearStreakLogs = () => {
+    triggerHaptic('warning');
+    // Clear all prayer_checklist_* keys from localStorage
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('prayer_checklist_') || key === 'tasbih_daily_logs' || key === 'noor_voluntary_fasted_dates')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => safeStorage.removeItem(k));
+    }
+    setConfirmClearType(null);
+    setStorageFeedback(isEn ? 'Legacy prayer & streak logs cleared. Settings preserved.' : 'تم تصفير سجلات الصلوات القديمة والتتابع مع الحفاظ الكامل على إعداداتك ✓');
+    setTimeout(() => setStorageFeedback(null), 3500);
+  };
+
+  const handleClearAllTempCache = () => {
+    triggerHaptic('warning');
+    // Save critical settings before clearing
+    const savedSettings = safeStorage.getItem('islamic_app_settings');
+    const savedTheme = safeStorage.getItem('noor_theme_preference');
+    const savedFavorites = safeStorage.getItem('azkar_favorites');
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.clear();
+    }
+
+    // Restore critical user configuration immediately
+    if (savedSettings) safeStorage.setItem('islamic_app_settings', savedSettings);
+    if (savedTheme) safeStorage.setItem('noor_theme_preference', savedTheme);
+    if (savedFavorites) safeStorage.setItem('azkar_favorites', savedFavorites);
+
+    setConfirmClearType(null);
+    setStorageFeedback(isEn ? 'All cache cleared. User configuration preserved.' : 'تم تنظيف كافة الذاكرة المؤقتة بنجاح مع الحفاظ على كافة إعداداتك ومفضلاتك ✓');
+    setTimeout(() => setStorageFeedback(null), 3500);
+  };
 
   const handleDownloadZip = async () => {
     try {
@@ -855,7 +910,117 @@ export default function SettingsModal({
             </div>
           </div>
 
-          {/* 4. Complete Export Application for iPhone (iOS ZIP) */}
+          {/* 4. Selective Clear Storage & Cache Utility */}
+          <div className="space-y-3.5 pt-2">
+            <h5 className="text-xs font-black text-slate-800 dark:text-slate-200 border-r-4 rtl:border-r-4 ltr:border-l-4 border-rose-500 pr-2 ltr:pl-2 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Database className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                <span>{isEn ? "Selective Storage & Cache Management" : "إدارة الذاكرة ومسح البيانات المؤقتة"}</span>
+              </span>
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-extrabold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                {isEn ? "Safe: Settings Protected" : "الإعدادات محمية دائماً ✓"}
+              </span>
+            </h5>
+
+            {/* Storage Status Feedback */}
+            {storageFeedback && (
+              <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 text-emerald-900 dark:text-emerald-200 rounded-2xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>{storageFeedback}</span>
+              </div>
+            )}
+
+            {/* Confirmation Dialog */}
+            {confirmClearType && (
+              <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-500/30 rounded-2xl space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>
+                    {confirmClearType === 'notifications' 
+                      ? (isEn ? "Are you sure you want to clear cached notification logs?" : "هل أنت متأكد من مسح سجل الإشعارات المؤقتة؟")
+                      : confirmClearType === 'streaks'
+                      ? (isEn ? "Clear legacy prayer logs and streak records? (Settings will be kept safe)" : "هل تريد تصفير سجلات الصلوات والتتابع القديم؟ (إعداداتك محمية تماماً)")
+                      : (isEn ? "Clean all temporary caches? Your custom cities, method and preferences will be preserved." : "مسح كافة الملفات المؤقتة؟ سيتم الحفاظ التام على مدينتك وطريقة الحساب والإعدادات.")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      if (confirmClearType === 'notifications') handleClearNotificationsCache();
+                      else if (confirmClearType === 'streaks') handleClearStreakLogs();
+                      else handleClearAllTempCache();
+                    }}
+                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs cursor-pointer active:scale-95"
+                  >
+                    {isEn ? "Yes, Clear" : "نعم، تأكيد المسح"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmClearType(null)}
+                    className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-700"
+                  >
+                    {isEn ? "Cancel" : "إلغاء"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="p-4 bg-white dark:bg-[#0B1516] rounded-2xl border border-[#EBE7DF] dark:border-[#132326] space-y-3">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {isEn 
+                  ? "Selectively free up local storage space on your device while keeping your critical preferences, country, and prayer calculations intact."
+                  : "تتيح لك هذه الأداة تحرير المساحة المحلية للجهاز بشكل انتقائي مع الحفاظ التام والمطلق على موقعك وطريقة الحساب والتفضيلات."}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                {/* 1. Clear Notification Cache */}
+                <button
+                  id="clear-notifications-cache-btn"
+                  onClick={() => { triggerHaptic('selection'); setConfirmClearType('notifications'); }}
+                  className="p-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-right font-sans transition-all cursor-pointer active:scale-95 flex flex-col justify-between space-y-1.5"
+                >
+                  <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
+                    <span className="text-xs font-bold">{isEn ? "Notification Cache" : "مؤقتات الإشعارات"}</span>
+                    <Trash2 className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                    {isEn ? "Clears queued alert logs" : "مسح سجلات التنبيه المجدولة"}
+                  </span>
+                </button>
+
+                {/* 2. Clear Legacy Prayer Logs */}
+                <button
+                  id="clear-prayer-streaks-btn"
+                  onClick={() => { triggerHaptic('selection'); setConfirmClearType('streaks'); }}
+                  className="p-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-right font-sans transition-all cursor-pointer active:scale-95 flex flex-col justify-between space-y-1.5"
+                >
+                  <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
+                    <span className="text-xs font-bold">{isEn ? "Streak & Prayer Logs" : "سجلات التتابع القديمة"}</span>
+                    <Trash2 className="w-3.5 h-3.5 text-amber-500" />
+                  </div>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                    {isEn ? "Resets daily check history" : "تصفير توثيق الأيام السابقة"}
+                  </span>
+                </button>
+
+                {/* 3. Clear All Temp Cache (Preserving Settings) */}
+                <button
+                  id="clear-all-temp-cache-btn"
+                  onClick={() => { triggerHaptic('selection'); setConfirmClearType('allCache'); }}
+                  className="p-3 bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-800/40 rounded-xl text-right font-sans transition-all cursor-pointer active:scale-95 flex flex-col justify-between space-y-1.5"
+                >
+                  <div className="flex items-center justify-between text-rose-800 dark:text-rose-300">
+                    <span className="text-xs font-bold">{isEn ? "Full Cache Reset" : "تنظيف شامل آمن"}</span>
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                  </div>
+                  <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium">
+                    {isEn ? "Keeps settings & country" : "يحفظ مدينتك وطريقة الحساب"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Complete Export Application for iPhone (iOS ZIP) */}
           <div className="space-y-3.5 pt-2">
             <h5 className="text-xs font-black text-slate-800 dark:text-slate-200 border-r-4 rtl:border-r-4 ltr:border-l-4 border-amber-500 pr-2 ltr:pl-2 flex items-center gap-2">
               <span>{isEn ? "Export Application for iPhone & iOS (ZIP)" : "تصدير وتحميل التطبيق للآيفون (iOS & Xcode ZIP)"}</span>
