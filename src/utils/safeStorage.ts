@@ -1,55 +1,52 @@
 /**
- * Safe localStorage wrapper with in-memory fallback
- * Prevents DOMException / SecurityError crashes in iframes and iOS Safari private browsing
+ * Safe Storage wrapper using Capacitor Preferences for Native iOS & Android
+ * Prevents storage limits/failures and provides robust native persistence.
  */
 
+import { Preferences } from '@capacitor/preferences';
+
+// In-memory fallback if native storage fails
 const memoryStore: Record<string, string> = {};
 
 export const safeStorage = {
-  getItem: (key: string): string | null => {
+  getItem: async (key: string): Promise<string | null> => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        return window.localStorage.getItem(key);
+      const { value } = await Preferences.get({ key });
+      if (value !== null) {
+        return value;
       }
     } catch (e) {
-      // Fallback to memory
-      return memoryStore[key] || null;
+      console.warn('Preferences get error, falling back to memory:', e);
     }
     return memoryStore[key] || null;
   },
 
-  setItem: (key: string, value: string): void => {
+  setItem: async (key: string, value: string): Promise<void> => {
     try {
       memoryStore[key] = value;
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(key, value);
-      }
+      await Preferences.set({ key, value });
     } catch (e) {
-      // Ignore or use memory
+      console.warn('Preferences set error:', e);
     }
   },
 
-  removeItem: (key: string): void => {
+  removeItem: async (key: string): Promise<void> => {
     try {
       delete memoryStore[key];
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem(key);
-      }
+      await Preferences.remove({ key });
     } catch (e) {
-      // Ignore
+      console.warn('Preferences remove error:', e);
     }
   },
 
-  clear: (): void => {
+  clear: async (): Promise<void> => {
     try {
       for (const k in memoryStore) {
         delete memoryStore[k];
       }
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.clear();
-      }
+      await Preferences.clear();
     } catch (e) {
-      // Ignore
+      console.warn('Preferences clear error:', e);
     }
   }
 };
