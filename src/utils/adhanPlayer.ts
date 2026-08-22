@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { Capacitor } from '@capacitor/core';
 import { ADHAN_VOICES_LIST, AdhanVoiceOption } from '../data/adhan_voices';
 
 let activeAdhanAudio: HTMLAudioElement | null = null;
@@ -15,10 +16,9 @@ export function setAdhanPlayStateCallback(callback: ((isPlaying: boolean) => voi
 }
 
 /**
- * Unlock Web Audio & Audio Context on first user touch/interaction
+ * Unlock Audio Context on native/mobile web view
  */
 export function unlockAudio(): void {
-  if (typeof window === 'undefined') return;
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (AudioContextClass) {
@@ -31,7 +31,7 @@ export function unlockAudio(): void {
 }
 
 /**
- * Play authentic MP3 Adhan audio stream with volume control and automatic stop
+ * Play Adhan audio stream with volume control and automatic stop for Native/Mobile app
  */
 export async function playAdhanAudio(voiceId: string = 'makkah', volume: number = 1.0): Promise<HTMLAudioElement | null> {
   // Stop existing audio if playing
@@ -41,7 +41,6 @@ export async function playAdhanAudio(voiceId: string = 'makkah', volume: number 
   const voice = ADHAN_VOICES_LIST.find(v => v.id === voiceId) || ADHAN_VOICES_LIST[0];
   currentVoiceId = voice.id;
 
-  // Curated high-reliability local MP3 and fallback CDNs for real authentic Muezzins
   const candidateUrls = [
     ...voice.audioUrls,
     `/audio/${voice.id}.mp3`,
@@ -53,7 +52,6 @@ export async function playAdhanAudio(voiceId: string = 'makkah', volume: number 
     try {
       const audio = new Audio();
       audio.src = url;
-      // Do not set crossOrigin for same-origin local files to prevent unnecessary CORS preflights
       if (url.startsWith('http')) {
         audio.crossOrigin = 'anonymous';
       }
@@ -62,7 +60,6 @@ export async function playAdhanAudio(voiceId: string = 'makkah', volume: number 
 
       activeAdhanAudio = audio;
 
-      // Handle natural end of audio
       audio.onended = () => {
         if (activeAdhanAudio === audio) {
           stopAdhanAudio();
@@ -144,11 +141,9 @@ export function getActiveAdhanAudio(): HTMLAudioElement | null {
 }
 
 /**
- * Play a gentle, soft pre-prayer harmonic chime alert (e.g. 5 minutes before prayer)
+ * Play a gentle, soft pre-prayer harmonic chime alert
  */
 export function playPrePrayerChime(): void {
-  if (typeof window === 'undefined') return;
-
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return;
@@ -191,8 +186,6 @@ export function playPrePrayerChime(): void {
  * Play Iqama / post-prayer alert chime
  */
 export function playIqamaChime(): void {
-  if (typeof window === 'undefined') return;
-
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return;
