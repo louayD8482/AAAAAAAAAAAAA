@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sun, 
@@ -108,6 +109,13 @@ const PRAYERS_INFO = {
   }
 };
 
+const getLocalDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSearchFavModalOpen, setIsSearchFavModalOpen] = useState<boolean>(false);
@@ -207,99 +215,12 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Daily Azkar background reminders checker
+  // Native iOS / Android notification scheduling.
+  // Browser Notification APIs are intentionally not used here; lock-screen reminders
+  // are handled by Capacitor Local Notifications in nativeNotifications.ts.
   useEffect(() => {
-    const triggeredKey = 'noor_triggered_reminders';
-    
-    const checkReminders = () => {
-      // Check if global settings for Azkar reminders are enabled
-      if (!settings.azkarReminder) return;
+    if (!Capacitor.isNativePlatform()) return;
 
-      // Check browser notification support and permission
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-
-      const stored = safeStorage.getItem('noor_azkar_reminders');
-      let reminders = [];
-      if (stored) {
-        try {
-          reminders = JSON.parse(stored);
-        } catch (e) {
-          reminders = [];
-        }
-      } else {
-        reminders = [
-          { id: 'morning', name: 'أذكار الصباح', time: '07:00', enabled: true },
-          { id: 'evening', name: 'أذكار المساء', time: '16:30', enabled: true },
-          { id: 'sleep', name: 'أذكار النوم', time: '22:00', enabled: true },
-          { id: 'wakeup', name: 'أذكار الاستيقاظ', time: '05:30', enabled: false }
-        ];
-        safeStorage.setItem('noor_azkar_reminders', JSON.stringify(reminders));
-      }
-
-      const now = new Date();
-      // Format current local time to HH:MM (e.g. "07:00")
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const currentHHMM = `${hours}:${minutes}`;
-      const todayStr = now.toISOString().substring(0, 10); // "YYYY-MM-DD"
-
-      // Load already triggered list
-      const triggeredStored = safeStorage.getItem(triggeredKey);
-      let triggeredList: string[] = [];
-      if (triggeredStored) {
-        try {
-          triggeredList = JSON.parse(triggeredStored);
-        } catch (e) {
-          triggeredList = [];
-        }
-      }
-
-      // Filter and clean old items (older than today)
-      triggeredList = triggeredList.filter(item => item.startsWith(todayStr));
-
-      reminders.forEach((rem: any) => {
-        if (rem.enabled && rem.time === currentHHMM) {
-          const uniqueTriggerId = `${todayStr}-${rem.id}-${rem.time}`;
-          if (!triggeredList.includes(uniqueTriggerId)) {
-            let bodyText = '';
-            if (rem.id === 'morning') {
-              bodyText = 'حان الآن وقت قراءة أذكار الصباح، حفظكم الله ورعاكم من كل سوء.';
-            } else if (rem.id === 'evening') {
-              bodyText = 'حان الآن وقت قراءة أذكار المساء، تقبل الله منا ومنكم صالح الأعمال.';
-            } else if (rem.id === 'sleep') {
-              bodyText = 'حان وقت أذكار النوم لنوم مبارك وهانئ وحفظ من الله عز وجل.';
-            } else if (rem.id === 'wakeup') {
-              bodyText = 'الحمد لله الذي أحيانا بعد ما أماتنا وإليه النشور. حان وقت أذكار الاستيقاظ.';
-            } else {
-              bodyText = `حان الآن موعد قراءة ${rem.name}.`;
-            }
-
-            try {
-              new Notification(rem.name, {
-                body: bodyText,
-                icon: '/src/assets/images/app_logo_1784263255295.jpg',
-                dir: 'rtl'
-              });
-            } catch (err) {
-              console.error('Failed to display browser notification:', err);
-            }
-
-            // Append to triggered list to prevent duplicate triggers in the same minute
-            triggeredList.push(uniqueTriggerId);
-            safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
-          }
-        }
-      });
-    };
-
-    // Run check immediately and then every 15 seconds
-    checkReminders();
-    const interval = setInterval(checkReminders, 15000);
-    return () => clearInterval(interval);
-  }, [settings.azkarReminder]);
-
-  // Request native mobile & browser notification permissions and schedule lock-screen alerts
-  useEffect(() => {
     requestAllPermissions().then((granted) => {
       if (granted) {
         getAccuratePrayerTimes(
@@ -321,7 +242,9 @@ export default function App() {
     });
   }, [settings.city, settings.adhanReminder, settings.azkarReminder, settings.prePrayerReminder, settings.iqamaReminder, settings.fridayKahfReminder, settings.tahajjudReminder]);
 
-  // Daily Adhan & Prayer Times background checker
+  // Foreground prayer checker: handles live in-app audio/visual alerts only.
+  // No Web Notification API is used here.
+  // Lock-screen/background reminders are scheduled natively by Capacitor.
   useEffect(() => {
     const triggeredKey = 'noor_triggered_adhan';
     
@@ -349,7 +272,7 @@ export default function App() {
       const hours = String(now.getHours()).padStart(2, '0');
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const currentHHMM = `${hours}:${minutes}`;
-      const todayStr = now.toISOString().substring(0, 10); // "YYYY-MM-DD"
+      const todayStr = getLocalDateKey(now); // Local YYYY-MM-DD
       const preMinOffset = settings.prePrayerMinutes ?? 5;
 
       // Load already triggered list
@@ -366,42 +289,9 @@ export default function App() {
       // Filter and clean old items (older than today)
       triggeredList = triggeredList.filter(item => item.startsWith(todayStr));
 
-      // 1. Check Friday Kahf Reminder (Every Friday at 10:30 AM)
-      if (now.getDay() === 5 && currentHHMM === '10:30' && settings.fridayKahfReminder !== false) {
-        const fridayTriggerId = `${todayStr}-friday-kahf`;
-        if (!triggeredList.includes(fridayTriggerId)) {
-          if ('Notification' in window && Notification.permission === 'granted') {
-            try {
-              new Notification('جمعة مباركة 🕌', {
-                body: 'لا تنس قراءة سورة الكهف والإكثار من الصلاة على النبي ﷺ والتحري لساعة الاستجابة.',
-                icon: settings.appLogoUrl || '/src/assets/images/app_logo_1784263255295.jpg',
-                dir: 'rtl'
-              });
-            } catch (err) {}
-          }
-          triggeredList.push(fridayTriggerId);
-          safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
-        }
-      }
-
-      // 2. Check Tahajjud Reminder (Every day at 03:30 AM)
-      if (currentHHMM === '03:30' && settings.tahajjudReminder !== false) {
-        const tahajjudTriggerId = `${todayStr}-tahajjud`;
-        if (!triggeredList.includes(tahajjudTriggerId)) {
-          if ('Notification' in window && Notification.permission === 'granted') {
-            try {
-              new Notification('الثلث الأخير من الليل 🌙', {
-                body: 'وقت النزول الإلهي واستجابة الدعوات.. طوبى لمن قام وركع واستغفر بالأسحار.',
-                icon: settings.appLogoUrl || '/src/assets/images/app_logo_1784263255295.jpg',
-                dir: 'rtl'
-              });
-            } catch (err) {}
-          }
-          triggeredList.push(tahajjudTriggerId);
-          safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
-        }
-      }
-
+      // Lock-screen reminders such as Friday Al-Kahf and Tahajjud are scheduled
+      // natively by scheduleAllNativeNotifications().
+      // Keep this foreground checker only for live in-app audio/visual behavior.
       computedPrayers.forEach((p) => {
         const [pHour, pMin] = p.time.split(':').map(Number);
         
@@ -420,15 +310,6 @@ export default function App() {
               if (settings.soundEnabled) {
                 playPrePrayerChime();
               }
-              if ('Notification' in window && Notification.permission === 'granted') {
-                try {
-                  new Notification(`اقترب موعد صلاة ${p.arabicName} 🕌 (متبقي ${preMinOffset} دقائق)`, {
-                    body: `تنبيه مسبق: صلاة ${p.arabicName} ستُرفع عند الساعة ${formatTime12(p.time, false)}. استعد للوضوء وإجابة النداء.`,
-                    icon: settings.appLogoUrl || '/src/assets/images/app_logo_1784263255295.jpg',
-                    dir: 'rtl'
-                  });
-                } catch (err) {}
-              }
               triggeredList.push(preTriggerId);
               safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
             }
@@ -446,20 +327,7 @@ export default function App() {
               playAdhanAudio(settings.selectedAdhanVoice || 'makkah', 1.0);
             }
 
-            // Browser Background notification (Adhan Reminder)
-            if (settings.adhanReminder) {
-              if ('Notification' in window && Notification.permission === 'granted') {
-                try {
-                  new Notification(`حان الآن موعد صلاة ${p.arabicName}.. تقبل الله طاعتكم 🕌`, {
-                    body: `حان الآن موعد صلاة ${p.arabicName} في ${settings.city} عند الساعة ${formatTime12(p.time, false)}.\nحيّ على الصلاة، حيّ على الفلاح.\n\nالدعاء المأثور: ${info?.supplication || ''}`,
-                    icon: settings.appLogoUrl || '/src/assets/images/app_logo_1784263255295.jpg',
-                    dir: 'rtl'
-                  });
-                } catch (err) {
-                  console.error('Failed to display browser notification:', err);
-                }
-              }
-            }
+            // Lock-screen notification is handled by the native scheduler.
 
             // In-App Visual Alert popup (Visual Adhan Alert)
             if (settings.visualAdhanAlert) {
@@ -493,15 +361,6 @@ export default function App() {
             if (!triggeredList.includes(postTriggerId)) {
               if (settings.soundEnabled) {
                 playIqamaChime();
-              }
-              if ('Notification' in window && Notification.permission === 'granted') {
-                try {
-                  new Notification(`حان الآن موعد إقامة صلاة ${p.arabicName} 🕌`, {
-                    body: `تذكير بالإقامة: انقضت ${iqamaOffset} دقيقة على أذان ${p.arabicName}. حيّ على الصلاة وأدرك صلاة الجماعة.`,
-                    icon: settings.appLogoUrl || '/src/assets/images/app_logo_1784263255295.jpg',
-                    dir: 'rtl'
-                  });
-                } catch (err) {}
               }
               triggeredList.push(postTriggerId);
               safeStorage.setItem(triggeredKey, JSON.stringify(triggeredList));
@@ -589,7 +448,7 @@ export default function App() {
   // Persisted Daily Worship Tracker
   const [dailyPrayers, setDailyPrayers] = useState<{ [key: string]: boolean }>(() => {
     const saved = safeStorage.getItem('noor_daily_prayers_checked');
-    const todayStr = new Date().toISOString().substring(0, 10);
+    const todayStr = getLocalDateKey(new Date());
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -634,6 +493,10 @@ export default function App() {
 
   const handleRequestNotificationPermissions = async () => {
     try {
+      if (!Capacitor.isNativePlatform()) {
+        setNotificationStatus(settings.language === 'en' ? 'Available in the iOS/Android app' : 'متاح داخل تطبيق iOS/Android');
+        return;
+      }
       const granted = await requestAllPermissions();
       if (granted) {
         setNotificationStatus(settings.language === 'en' ? 'Enabled Successfully ✅' : 'مفعلة بنجاح ✅');
@@ -661,10 +524,10 @@ export default function App() {
 
   // Random Inspirations Box
   const CURATED_INSPIRATIONS = [
-    { text: "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ", ref: "سورة الرعد • الآية ٢٨", type: "قرآن" },
-    { text: "إِنَّ مَعَ الْعُسْرِ يُسْرًا", ref: "سورة الشرح • الآية ٦", type: "قرآن" },
-    { text: "فَإِنِّي قَرِيبٌ أُجِيبُ دَعْوَةَ الدَّاعِ إِذَا دَعَانِ", ref: "سورة البقرة • الآية ١٨٦", type: "قرآن" },
-    { text: "مَا وَدَّعَكَ رَبُّكَ وَمَا قَلَىٰ", ref: "سورة الضحى • الآية ٣", type: "قرآن" },
+    { text: "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ", ref: "سورة الرعد • الآية ٢٨", type: "قرآن" },
+    { text: "إِنَّ مَعَ الْعُسْرِ يُسْرًا", ref: "سورة الشرح • الآية ٦", type: "قرآن" },
+    { text: "فَإِنِّي قَرِيبٌ أُجِيبُ دَعْوَةَ الدَّاعِ إِذَا دَعَانِ", ref: "سورة البقرة • الآية ١٨٦", type: "قرآن" },
+    { text: "مَا وَدَّعَكَ رَبُّكَ وَمَا قَلَىٰ", ref: "سورة الضحى • الآية ٣", type: "قرآن" },
     { text: "احفظ الله يحفظك، احفظ الله تجده تجاهك", ref: "الحديث الشريف • رواه الترمذي", type: "حديث" },
     { text: "عجبًا لأمر المؤمن إن أمره كله خير، وليس ذاك لأحد إلا للمؤمن", ref: "الحديث الشريف • رواه مسلم", type: "حديث" }
   ];
@@ -673,7 +536,7 @@ export default function App() {
   // Daily open streak counter effect
   useEffect(() => {
     const lastOpen = safeStorage.getItem('noor_last_open_date');
-    const todayStr = new Date().toISOString().substring(0, 10);
+    const todayStr = getLocalDateKey(new Date());
     const currentStreak = safeStorage.getItem('noor_streak_count');
     let streak = currentStreak ? parseInt(currentStreak, 10) : 1;
     
@@ -701,7 +564,7 @@ export default function App() {
   const toggleDailyPrayer = (key: string) => {
     const updated = { ...dailyPrayers, [key]: !dailyPrayers[key] };
     setDailyPrayers(updated);
-    const todayStr = new Date().toISOString().substring(0, 10);
+    const todayStr = getLocalDateKey(new Date());
     safeStorage.setItem('noor_daily_prayers_checked', JSON.stringify({ date: todayStr, prayers: updated }));
   };
 
