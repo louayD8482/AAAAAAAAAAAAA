@@ -7,50 +7,55 @@ interface PrivacyPolicyModalProps {
   isEn?: boolean;
 }
 
-export const PRIVACY_POLICY_TEXT_AR = `سياسة الخصوصية لتطبيق "نور الإسلام"
+export const PRIVACY_POLICY_TEXT_AR = `سياسة الخصوصية الرسمية لتطبيق "نور الإسلام" (Noor Al-Islam)
 
-مقدمة:
-نُولي في تطبيق "نور الإسلام" اهتماماً بالغاً بخصوصية المستخدمين. توضح هذه السياسة كيف نتعامل مع البيانات والمعلومات عند استخدامك لتطبيقنا.
+١. مقدمة والتزام بالخصوصية:
+نُولي في تطبيق "نور الإسلام" اهتماماً فائقاً بحماية خصوصية المستخدمين وسلامة بياناتهم وفق إرشادات متجر آبل (App Store Guideline 5.1.1). صُمم التطبيق كصدقة جارية يقدم القرآن الكريم، الأذكار، مواقيت الصلاة، واتجاه القبلة، والمستشار الإسلامي الذكي.
 
-جمع البيانات:
-نحن لا نقوم بجمع أي بيانات شخصية أو حساسة عن المستخدمين (مثل الأسماء، أرقام الهواتف، البريد الإلكتروني، أو المواقع الجغرافية الحية). التطبيق مصمم لتقديم محتوى إسلامي متكامل (أذكار، قرآن كريم، مواقيت صلاة، قبلة، أدعية) دون الحاجة لتسجيل حساب أو تتبع المستخدم.
+٢. إذن الموقع الجغرافي (Location Usage):
+يطلب التطبيق إذن الوصول إلى موقعك الجغرافي الدقيق أو التقريبي فقط لحساب مواقيت الصلاة الفلكية الدقيقة لمدينتك وتحديد زاوية اتجاه القبلة نحو الكعبة المشرفة. لا يتم تتبع المستخدم ولا تخزين بيانات الموقع الجغرافي بشكل دائم في أي خوادم خارجية إطلاقاً.
 
-أذونات الجهاز:
-قد يتطلب التطبيق بعض الأذونات الأساسية فقط لعمل بعض الميزات الحيوية (مثل إذن الإشعارات لتنبيهات الأذان والصلوات والأذكار، أو إذن تحديد الموقع التقديري لحساب مواقيت الصلاة واتجاه القبلة محلياً)، وهذه البيانات والعمليات الحسابية تتم معالجتها محلياً بنسبة 100% على جهازك ولا يتم إرسالها أو تخزينها أو مشاركتها على أي خوادم خارجية إطلاقاً.
+٣. خدمات الذكاء الاصطناعي والمستشار الإسلامي والتفسير (AI Features):
+عند قيام المستخدم بطرح سؤال ديني في "اسأل نور الإسلام" أو طلب تفسير سورة/آية، يتم إرسال نص السؤال فقط بشكل مشفر وآمن عبر HTTPS إلى واجهة الذكاء الاصطناعي (Google Gemini) لتوليد الإجابة الموثوقة. لا يتم إرفاق أي بيانات شخصية، أو أسماء، أو معرفات أجهزة، أو مواقع جغرافية مع استفسارات الذكاء الاصطناعي.
 
-خدمات الأطراف الثالثة:
-لا نشارك أي معلومات أو بيانات مع أي أطراف ثالثة أو شركات إعلانية. التطبيق خالٍ تماماً من الإعلانات التجارية المزعجة.
+٤. عدم جمع البيانات الشخصية والتخزين المحلي:
+التطبيق لا يتطلب تسجيل حساب ولا تسجيل دخول، ويخزن التفضيلات والختمات محلياً على جهازك عبر UserDefaults / LocalStorage فقط.
 
-التعديلات على السياسة:
-قد نقوم بتحديث سياسة الخصوصية من وقت لآخر لمواكبة التحديثات التقنية، وسيتم نشر أي تغييرات داخل هذه الصفحة في التطبيق مباشرة.
+٥. خلو تام من الإعلانات والتتبع:
+التطبيق خالٍ تماماً 100% من الإعلانات التجارية وأدوات التتبع الإعلاني (IDFA)، ولا يبيع أو يشارك أي بيانات مع أي جهة خارجية.
 
-التواصل معنا:
-إذا كانت لديك أي استفسارات أو ملاحظات حول سياسة الخصوصية، يسعدنا تواصلك مع مطور التطبيق مباشرة.`;
+٦. التواصل والمطور المسؤول:
+المطور: لؤي بن حسين (Luay Bin Hussein)
+البريد الإلكتروني للدعم والخصوصية: lwya0721@gmail.com`;
 
-export const PRIVACY_POLICY_TEXT_EN = `Privacy Policy for "Noor Al-Islam"
+export const PRIVACY_POLICY_TEXT_EN = `Privacy Policy for "Noor Al-Islam" (نور الإسلام)
 
-Introduction:
-At "Noor Al-Islam", we prioritize and strictly respect the privacy of our users. This policy outlines how we handle data and information when you use our application.
+1. Overview & Privacy Commitment:
+At Noor Al-Islam, we strictly respect and safeguard user privacy in full compliance with Apple App Store Review Guidelines (Guideline 5.1.1). The app provides Holy Quran recitations, daily Adhkar, prayer times, Qibla compass, and an AI Islamic Companion.
 
-Data Collection:
-We do NOT collect, store, or share any personal, sensitive, or identifiable user data (such as names, phone numbers, email addresses, or real-time location tracking). The application is designed to provide comprehensive Islamic content (Quran, Adhkar, Prayer Times, Qibla, Supplications) with zero user tracking and no account registration required.
+2. Location Permission & Usage:
+The application requests Location permission (Precise or Coarse GPS) solely to compute astronomical prayer times and determine the Qibla compass heading toward the Holy Kaaba. Location data is processed for immediate calculations and is never permanently stored, logged, or shared with third parties.
 
-Device Permissions:
-The application may request minimal local device permissions purely to operate core utility features (e.g., Local Notifications for Prayer Times/Adhan alerts, and local approximate coordinates to calculate prayer timings and Qibla direction). All calculations are executed 100% locally on your device and are never transmitted to or stored on external servers.
+3. AI Features & User Query Processing (Smart Assistant & Tafsir):
+When a user submits a religious question or requests Tafsir for a specific Ayah/Surah, the entered text query is securely transmitted over encrypted HTTPS to Google Gemini API solely to generate the Islamic response. Zero personal identifiers, names, emails, device IDs, or location coordinates are attached to or transmitted with AI requests.
 
-Third-Party Services:
-We do not share any data with third parties or advertising networks. The app is completely ad-free and tracking-free.
+4. Zero Personal Data Collection & Local Storage:
+No user accounts or logins are required. User preferences (Khatma, bookmarks, Tasbih) are stored strictly locally on your device via UserDefaults / LocalStorage.
 
-Policy Updates:
-We may update this Privacy Policy periodically to reflect technical enhancements. Any updates will be displayed directly within this page in the application.
+5. 100% Ad-Free & Zero Tracking:
+The app contains no commercial advertising SDKs, IDFA trackers, or data brokers.
 
-Contact Us:
-If you have any questions or feedback regarding this Privacy Policy, please feel free to reach out to the developer.`;
+6. Contact & Developer Support:
+Developer: Luay Bin Hussein
+Support & Privacy Email: lwya0721@gmail.com`;
 
 export const APPLE_REVIEW_NOTE_EN = `Hello Apple Review Team,
 Regarding the privacy policy and data collection for 'نور الإسلام' (Noor Al-Islam) app:
-The app is an Islamic utility app (containing Quran, Adhkar, and prayer times) and does not collect, store, or share any personal user data. No user accounts or login are required. The app operates locally on the user's device.
-Thank you.`;
+1. Location Data: Used solely to calculate astronomical prayer times and determine the Qibla direction.
+2. User Content (Text Queries): Used solely to generate Islamic answers and Quranic Tafsir via Google Gemini API over encrypted HTTPS with zero user identifiers attached.
+3. Local Storage: User preferences (Khatma progress, Tasbih counter, bookmarks) are stored strictly locally via UserDefaults / LocalStorage.
+4. No user accounts, no tracking (IDFA = false), and 100% ad-free.
+Thank you!`;
 
 export function PrivacyPolicyModal({ isOpen, onClose, isEn = false }: PrivacyPolicyModalProps) {
   const [copiedSection, setCopiedSection] = useState<string | null>(null);

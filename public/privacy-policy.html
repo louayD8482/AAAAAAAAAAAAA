@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>سياسة الخصوصية | تطبيق نور الإسلام - Noor Al-Islam Privacy Policy</title>
-  <meta name="description" content="سياسة الخصوصية المعتمدة لتطبيق نور الإسلام - متوافقة تماماً مع إرشادات متجر آبل App Store (Guideline 5.1.1) وسياسات حماية البيانات الدولية.">
+  <meta name="description" content="سياسة الخصوصية الرسمية والمعتمدة لتطبيق نور الإسلام - متوافقة تماماً مع متطلبات متجر آبل App Store (Guideline 5.1.1) وقوانين حماية البيانات.">
   <meta property="og:title" content="سياسة الخصوصية | تطبيق نور الإسلام">
-  <meta property="og:description" content="تطبيق نور الإسلام لا يجمع أي بيانات شخصية ويعمل بأعلى معايير الأمان والشفافية.">
+  <meta property="og:description" content="سياسة خصوصية شفافة ومعتمدة توضح استخدام الموقع الجغرافي لحساب مواقيت الصلاة ونصوص الاستفسارات للذكاء الاصطناعي.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -35,7 +35,7 @@
     }
     .container {
       width: 100%;
-      max-width: 840px;
+      max-width: 860px;
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 28px;
@@ -168,6 +168,30 @@
       font-size: 14px;
     }
     li { margin-bottom: 8px; }
+    .table-container {
+      overflow-x: auto;
+      margin-top: 14px;
+      margin-bottom: 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      text-align: right;
+    }
+    th, td {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+    }
+    th {
+      background: rgba(6, 78, 59, 0.4);
+      color: #fcd34d;
+      font-weight: 800;
+    }
+    td {
+      background: rgba(255, 255, 255, 0.02);
+      color: #e2e8f0;
+    }
     .english-content {
       display: none;
       direction: ltr;
@@ -183,6 +207,9 @@
     .english-content ul {
       margin-left: 20px;
       margin-right: 0;
+    }
+    .english-content table {
+      text-align: left;
     }
     .highlight-card {
       background: rgba(217, 119, 6, 0.1);
@@ -229,7 +256,7 @@
     <div class="header">
       <div class="badge">
         <span>✓</span>
-        <span>وثيقة معتمدة ومطابقة لشروط متجر App Store (Guideline 5.1.1)</span>
+        <span>وثيقة معتمدة ومطابقة لمتطلبات App Store (Guideline 5.1.1)</span>
       </div>
       <h1 id="main-title">سياسة الخصوصية | تطبيق نور الإسلام</h1>
       <p class="subtitle" id="main-subtitle">تاريخ السريان وآخر تحديث: 2026</p>
@@ -245,62 +272,93 @@
     <div class="app-url-box">
       <div class="app-url-title">
         <span>🌐</span>
-        <span id="url-box-label">الرابط المباشر لسياسة الخصوصية لخانة (Privacy Policy URL) في App Store Connect:</span>
+        <span id="url-box-label">الرابط الرسمي المعتمد لخانة (Privacy Policy URL) في App Store Connect:</span>
       </div>
-      <div class="app-url-value" id="current-url">https://ais-pre-t3wezzjsald73v3nriwqhe-77969126070.europe-west2.run.app/privacy-policy.html</div>
+      <div class="app-url-value" id="current-url">https://ais-pre-t3wezzjsald73v3nriwqhe-77969126070.europe-west2.run.app/privacy.html</div>
       <button class="copy-btn" id="copy-url-btn" onclick="copyUrl()">نسخ الرابط (Copy URL)</button>
     </div>
 
     <!-- ARABIC CONTENT -->
     <div id="content-ar">
       <div class="section">
-        <h2>🛡️ ١. مقدمة والتزام بالخصوصية</h2>
-        <p>نُولي في تطبيق <strong>«نور الإسلام» (Noor Al-Islam)</strong> اهتماماً فائقاً بحماية خصوصية المستخدمين وسلامة بياناتهم. صُمم التطبيق كصدقة جارية وتطبيق إسلامي نافع يقدم القرآن الكريم، الأذكار اليومية، مواقيت الصلاة، واتجاه القبلة، والمستشار الإسلامي الذكي، مع الالتزام بأقصى معايير الشفافية والأمان.</p>
+        <h2>🛡️ ١. مقدمة والتزام بالخصوصية والشفافية</h2>
+        <p>نُولي في تطبيق <strong>«نور الإسلام» (Noor Al-Islam)</strong> اهتماماً فائقاً بحماية خصوصية المستخدمين وسلامة بياناتهم. صُمم التطبيق كصدقة جارية وتطبيق إسلامي نافع يقدم القرآن الكريم، الأذكار اليومية، مواقيت الصلاة، واتجاه القبلة، والمستشار الإسلامي الذكي، مع الالتزام بأقصى معايير الشفافية والأمان وفق متطلبات متجر آبل (App Store Guideline 5.1.1).</p>
       </div>
 
       <div class="section">
-        <h2>🔒 ٢. عدم جمع البيانات الشخصية (Zero Personal Data Collection)</h2>
-        <p>نحن <strong>لا نجمع، ولا نخزن، ولا نشارك، ولا نبيع</strong> أي بيانات شخصية أو تعريفية عن المستخدمين إطلاقاً، بما في ذلك:</p>
+        <h2>📍 ٢. إذن الموقع الجغرافي واستخداماته (Location Data Usage)</h2>
+        <p>يطلب التطبيق إذن الوصول إلى موقعك الجغرافي (الدقيق أو التقريبي) بشكل صريح، ويتم استخدامه في الحالات التالية فقط:</p>
         <ul>
-          <li>لا نطلب الاسم أو رقم الهاتف أو العنوان.</li>
-          <li>لا يتطلب التطبيق أي تسجيل حساب أو تسجيل دخول (No Account / No Login Required).</li>
-          <li>لا نقوم بتتبع نشاطك داخل التطبيق أو بناء ملفات تعريف سلوكية (No User Profiling).</li>
-          <li>لا نستخدم أي معرفات إعلانية (IDFA) أو ملفات كوكيز للجهات الخارجية.</li>
+          <li><strong>حساب مواقيت الصلاة الفلكية:</strong> يتم إرسال واستخدام إحداثيات خط الطول وخط العرض لحساب مواعيد الصلوات الخمس بدقة وفق المذهب والطريقة الفلكية المعتمدة لمدينتك.</li>
+          <li><strong>تحديد اتجاه القبلة والبوصلة:</strong> لحساب الزاوية الجغرافية الدقيقة لاتجاه الكعبة المشرفة بمكة المكرمة من موقع المستخدم الحالي.</li>
+          <li><strong>الخصوصية وعدم التخزين الدائم:</strong> لا يتم تسجيل تحركات المستخدم أو تخزين سجلات الموقع الجغرافي بشكل دائم في أي خادم خارجي، ولا يتم ربط الموقع بأي هوية شخصية أو إعلانية.</li>
         </ul>
       </div>
 
       <div class="section">
-        <h2>📍 ٣. أذونات الجهاز والمعالجة المحلية (On-Device Processing)</h2>
-        <p>يطلب التطبيق أذونات نظام محدودة جداً لتقديم وظائفه الأساسية فقط، وتتم معالجة البيانات <strong>محلياً على جهازك</strong>:</p>
+        <h2>🤖 ٣. خدمات الذكاء الاصطناعي ومعالجة الاستفسارات (AI Features & Processing)</h2>
+        <p>يتضمن التطبيق ميزات ذكية اختيارية تشمل "اسأل نور الإسلام" وتفسير الآيات والسور القرآنية:</p>
         <ul>
-          <li><strong>إذن الموقع الجغرافي (Location Permission):</strong> يُستخدم حصرياً لحساب مواقيت الصلاة الفلكية حسب إحداثياتك وتحديد زاوية اتجاه القبلة بدقة. لا يتم حفظ إحداثيات موقعك في أي خادم خارجي ولا مشاركتها مع أي جهة.</li>
-          <li><strong>إذن الإشعارات المحلية (Local Notifications):</strong> يُستخدم لتنبيهك بأوقات الصلاة والأذان والأذكار محلياً عبر نظام iOS بدون الحاجة لخادم إشعارات خارجي.</li>
+          <li><strong>نصوص الاستفسارات:</strong> عند قيام المستخدم بكتابة سؤال إسلامي أو طلب تفسير آية معينة، يتم إرسال النص المكتوب فقط بشكل مشفر وآمن عبر بروتوكول HTTPS إلى خادم التطبيق وواجهة الذكاء الاصطناعي (Google Gemini API) لتوليد الإجابة الفقهية أو التفسير الموثوق المستند للكتاب والسنّة.</li>
+          <li><strong>عدم إرسال معلومات شخصية:</strong> لا يتم إرفاق أي بيانات شخصية، أو أسماء، أو بريد إلكتروني، أو معرفات أجهزة، أو موقع جغرافي مع طلبات الذكاء الاصطناعي.</li>
+          <li><strong>عدم الاستخدام في الإعلانات:</strong> لا تُستخدم هذه الاستفسارات لأي أغراض تسويقية أو بناء ملفات تعريف للمستخدمين.</li>
         </ul>
       </div>
 
       <div class="section">
-        <h2>🤖 ٤. خدمات الذكاء الاصطناعي والمستشار الذكي (AI Features & Third-Party Processing)</h2>
-        <p>يتضمن التطبيق ميزة اختيارية للمستشار الإسلامي الذكي وخدمة تفسير الآيات القرآنية:</p>
-        <ul>
-          <li>عندما يقوم المستخدم بطرح سؤال ديني أو طلب تفسير سورة/آية، يتم إرسال نص السؤال بشكل مشفر وآمن عبر بروتوكول HTTPS إلى واجهة برمجة تطبيقات الذكاء الاصطناعي (Google Gemini API) لتوليد الإجابة النصية الموثوقة والمستندة إلى القرآن والسنّة.</li>
-          <li><strong>البيانات المرسلة:</strong> يقتصر الإرسال على النص المكتوب في خانة السؤال فقط. <strong>لا يتم إرسال</strong> أي معلومات شخصية، أو موقع جغرافي، أو بيانات جهاز، أو أي معرفات للمستخدم.</li>
-          <li><strong>عدم التخزين لأغراض إعلانية:</strong> لا تُستخدم هذه الاستفسارات لأي أغراض إعلانية أو تجارية أو تتبعية.</li>
-        </ul>
+        <h2>📊 ٤. جدول ملصق الخصوصية لمتجر آبل (App Store Nutrition Label)</h2>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>نوع البيانات (Data Type)</th>
+                <th>الغرض من الاستخدام (Purpose)</th>
+                <th>الربط بالمستخدم (Linked to User)</th>
+                <th>التتبع (Tracking)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>الموقع الجغرافي (Location)</strong></td>
+                <td>وظائف التطبيق: حساب مواقيت الصلاة واتجاه القبلة</td>
+                <td>لا (غير مرتبط بالهوية)</td>
+                <td>لا (Zero Tracking)</td>
+              </tr>
+              <tr>
+                <td><strong>محتوى المستخدم: النصوص (User Content)</strong></td>
+                <td>وظائف التطبيق: معالجة أسئلة الذكاء الاصطناعي والتفسير</td>
+                <td>لا (غير مرتبط بالهوية)</td>
+                <td>لا (Zero Tracking)</td>
+              </tr>
+              <tr>
+                <td><strong>معرّفات الأجهزة أو الهوية الشخصية</strong></td>
+                <td>لا يتم جمعها نهائياً (None Collected)</td>
+                <td>لا</td>
+                <td>لا</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="section">
-        <h2>🚫 ٥. خلو تام من الإعلانات التجارية (100% Ad-Free)</h2>
-        <p>تطبيق «نور الإسلام» خالٍ تماماً من أي إعلانات تجارية، ولا يحتوي على حزم إعلانية (Ad SDKs) أو أدوات تتبع تسويقي.</p>
+        <h2>🔒 ٥. التخزين المحلي والأمان (Local Storage & Data Security)</h2>
+        <p>يتم تخزين تفضيلات المستخدم (مثل ختمات القرآن، عداد التسبيح، والإشارات المرجعية) محلياً على جهاز المستخدم عبر <code>UserDefaults / LocalStorage</code> فقط، ولا يتم رفعها لأي خادم خارجي.</p>
       </div>
 
       <div class="section">
-        <h2>👶 ٦. خصوصية الأطفال والأسرة (Children's Privacy)</h2>
-        <p>تطبيق «نور الإسلام» آمن 100% لجميع الفئات العمرية بما في ذلك الأطفال، ومتوافق تماماً مع متطلبات حماية خصوصية الأطفال على الإنترنت (COPPA) ومعايير متجر App Store للتطبيقات العائلية.</p>
+        <h2>🚫 ٦. خلو تام من الإعلانات والتتبع التجاري (100% Ad-Free & No Tracking)</h2>
+        <p>تطبيق «نور الإسلام» خالٍ تماماً من الإعلانات التجارية وأدوات التتبع الإعلاني (IDFA)، ولا يبيع أو يشارك أي بيانات مع أطراف ثالثة لأغراض تجارية.</p>
       </div>
 
       <div class="section">
-        <h2>✉️ ٧. معلومات التواصل والمطور المسؤول</h2>
-        <p>إذا كانت لديك أي استفسارات أو ملاحظات بخصوص سياسة الخصوصية، يسعدنا تواصلك معنا مباشرة:</p>
+        <h2>👶 ٧. خصوصية الأطفال والأسرة (Children's Privacy)</h2>
+        <p>التطبيق آمن لجميع الفئات العمرية بما في ذلك الأطفال، ومتوافق تماماً مع تشريعات حماية خصوصية الأطفال عبر الإنترنت (COPPA).</p>
+      </div>
+
+      <div class="section">
+        <h2>✉️ ٨. معلومات التواصل والمطور المسؤول</h2>
+        <p>لأي استفسارات أو ملاحظات بخصوص سياسة الخصوصية، يرجى التواصل مع المطور مباشرة:</p>
         <div class="contact-box">
           <p><strong>اسم التطبيق:</strong> نور الإسلام (Noor Al-Islam)</p>
           <p><strong>مُعرّف الحزمة (Bundle ID):</strong> com.noor.alislam</p>
@@ -315,54 +373,85 @@
     <div id="content-en" class="english-content">
       <div class="section">
         <h2>🛡️ 1. Overview & Privacy Commitment</h2>
-        <p>At <strong>Noor Al-Islam ("نور الإسلام")</strong>, we strictly respect and safeguard your privacy. This application is an Islamic utility app designed to provide Holy Quran recitation, daily Adhkar, accurate prayer times, Qibla compass, and an AI Islamic Companion, maintaining the highest standards of transparency and user safety.</p>
+        <p>At <strong>Noor Al-Islam ("نور الإسلام")</strong>, we strictly respect and safeguard user privacy. This application is an Islamic utility app providing Holy Quran recitation, daily Adhkar, accurate prayer times, Qibla direction, and an AI Islamic Companion, fully compliant with Apple App Store Review Guidelines (Guideline 5.1.1).</p>
       </div>
 
       <div class="section">
-        <h2>🔒 2. Zero Personal Data Collection Policy</h2>
-        <p>We <strong>do NOT collect, store, sell, or monetize</strong> any personally identifiable information (PII) or sensitive user data. Specifically:</p>
+        <h2>📍 2. Location Data Usage & Purpose</h2>
+        <p>The app requests Location permission (Precise or Coarse GPS) solely for the following explicit features:</p>
         <ul>
-          <li>No names, phone numbers, addresses, or emails are requested or recorded.</li>
-          <li>No user account or login is required to use any part of the application.</li>
-          <li>No behavioral tracking, analytics profiling, or user fingerprinting is conducted.</li>
-          <li>No tracking cookies, third-party analytics SDKs, or Identifier for Advertisers (IDFA) are used.</li>
+          <li><strong>Astronomical Prayer Times:</strong> Your geographic coordinates are used to calculate accurate prayer times (Fajr, Dhuhr, Asr, Maghrib, Isha) based on approved astronomical calculation methods.</li>
+          <li><strong>Qibla Compass Direction:</strong> Coordinates are used to calculate the exact azimuth bearing pointing towards the Holy Kaaba in Makkah.</li>
+          <li><strong>No Tracking & No Storage:</strong> Location coordinates are processed solely for immediate calculation and are not permanently logged, recorded on external databases, or shared with third parties.</li>
         </ul>
       </div>
 
       <div class="section">
-        <h2>📍 3. Device Permissions & Local Processing</h2>
-        <p>The application only requests minimal system permissions strictly necessary to deliver its religious utilities:</p>
+        <h2>🤖 3. AI Features & User Query Processing</h2>
+        <p>The app features optional AI Islamic assistance and Quranic Tafsir capabilities:</p>
         <ul>
-          <li><strong>Location Permission:</strong> Used solely on-device to compute astronomical prayer times and determine the Qibla compass bearing. Your location coordinates are never saved to external servers or shared with any third party.</li>
-          <li><strong>Local Notifications:</strong> Used solely to schedule local device reminders for Prayer Times, Adhan calls, and morning/evening Adhkar directly through iOS Local Notifications API without requiring persistent external server connections.</li>
+          <li><strong>User Text Inquiries:</strong> When a user submits an Islamic question or requests Tafsir for a specific Ayah/Surah, the entered text is transmitted securely over encrypted HTTPS to our processing backend and Google Gemini API solely to generate the textual response.</li>
+          <li><strong>Zero Personal Identifiers:</strong> No personal details, names, emails, device IDs, or location coordinates are attached to or transmitted with AI requests.</li>
+          <li><strong>No Commercial Profiling:</strong> Text queries are processed in real-time to return the answer and are never used for advertising, marketing, or profiling.</li>
         </ul>
       </div>
 
       <div class="section">
-        <h2>🤖 4. AI Features & Third-Party Processing (Smart Islamic Assistant & Tafsir)</h2>
-        <p>The app includes an optional AI-powered Islamic Advisor and Quranic Tafsir feature:</p>
-        <ul>
-          <li>When a user submits a religious query or requests Tafsir for a specific Surah/Ayah, the text prompt is sent securely and encrypted over HTTPS to Google's Gemini API solely to generate the relevant scholarly text response.</li>
-          <li><strong>Data Transmitted:</strong> Only the text query entered by the user is transmitted. <strong>No</strong> personal identifiers, device identifiers, user accounts, or location coordinates are attached or shared.</li>
-          <li><strong>No Commercial Use:</strong> Query data is processed strictly to return the immediate answer and is not used for advertising or marketing profiling.</li>
-        </ul>
+        <h2>📊 4. App Store Privacy Nutrition Labels (App Privacy Disclosure)</h2>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Data Category</th>
+                <th>Usage Purpose</th>
+                <th>Linked to Identity</th>
+                <th>Used for Tracking</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Location (Precise / Coarse)</strong></td>
+                <td>App Functionality (Prayer Times & Qibla Compass)</td>
+                <td>No (Not Linked)</td>
+                <td>No</td>
+              </tr>
+              <tr>
+                <td><strong>User Content (Text Queries)</strong></td>
+                <td>App Functionality (AI Assistant & Tafsir)</td>
+                <td>No (Not Linked)</td>
+                <td>No</td>
+              </tr>
+              <tr>
+                <td><strong>Personal & Device Identifiers</strong></td>
+                <td>None Collected</td>
+                <td>No</td>
+                <td>No</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="section">
-        <h2>🚫 5. Advertising & Tracking Free</h2>
-        <p>Noor Al-Islam is <strong>100% ad-free</strong>. We do not incorporate commercial advertising SDKs, ad networks, or data brokers.</p>
+        <h2>🔒 5. Local Storage & Security</h2>
+        <p>User preferences (such as Khatma progress, Tasbih counter, and bookmarks) are stored strictly locally on your device via <code>UserDefaults / LocalStorage</code>.</p>
       </div>
 
       <div class="section">
-        <h2>👶 6. Children's Privacy (COPPA Compliance)</h2>
-        <p>Noor Al-Islam is safe for users of all ages, including children. We strictly comply with the Children's Online Privacy Protection Act (COPPA) and Apple's App Store Family & Privacy guidelines.</p>
+        <h2>🚫 6. Ad-Free & Zero Tracking Policy</h2>
+        <p>Noor Al-Islam is <strong>100% ad-free</strong>. We do not use commercial advertising SDKs, IDFA trackers, or data brokers.</p>
       </div>
 
       <div class="section">
-        <h2>✉️ 7. Contact Information & Developer Support</h2>
-        <p>If you have any questions or requests regarding this Privacy Policy, please contact the developer directly:</p>
+        <h2>👶 7. Children's Privacy (COPPA Compliance)</h2>
+        <p>Noor Al-Islam is safe for users of all ages, including children, fully adhering to COPPA standards.</p>
+      </div>
+
+      <div class="section">
+        <h2>✉️ 8. Contact & Developer Support</h2>
+        <p>For questions or privacy inquiries, contact the developer directly:</p>
         <div class="contact-box">
-          <p><strong>Application:</strong> Noor Al-Islam (نور الإسلام)</p>
+          <p><strong>App Name:</strong> Noor Al-Islam (نور الإسلام)</p>
           <p><strong>Bundle Identifier:</strong> com.noor.alislam</p>
           <p><strong>Developer:</strong> Luay Bin Hussein (لؤي بن حسين)</p>
           <p><strong>Support & Privacy Email:</strong> <a href="mailto:lwya0721@gmail.com" style="color: #fcd34d; font-weight: bold;">lwya0721@gmail.com</a></p>
@@ -371,8 +460,8 @@
       </div>
 
       <div class="highlight-card">
-        <h3>🍎 App Store Review Team Note</h3>
-        <p>This privacy policy applies to the iOS application <strong>Noor Al-Islam (Bundle ID: com.noor.alislam)</strong>. The app operates locally on the user's device, requires no account authentication, collects zero personal data, and processes AI queries securely over HTTPS without transmitting user identities.</p>
+        <h3>🍎 App Store Review Team Summary</h3>
+        <p>This privacy policy applies to the iOS application <strong>Noor Al-Islam (Bundle ID: com.noor.alislam)</strong>. Location is used solely for on-device/astronomical prayer calculations and Qibla. AI text prompts are securely processed over HTTPS without linking to user identities. No tracking or advertising SDKs exist.</p>
       </div>
     </div>
 
@@ -385,7 +474,6 @@
   </div>
 
   <script>
-    // Automatically display the current host URL in the box
     if (typeof window !== 'undefined') {
       const fullUrl = window.location.href.split('?')[0].split('#')[0];
       const el = document.getElementById('current-url');
@@ -408,7 +496,7 @@
         btnEn.classList.add('active');
         title.textContent = 'Privacy Policy | Noor Al-Islam App';
         subtitle.textContent = 'Effective Date & Last Updated: 2026';
-        urlBoxLabel.textContent = 'Direct Privacy Policy URL for App Store Connect:';
+        urlBoxLabel.textContent = 'Official Privacy Policy URL for App Store Connect:';
         document.documentElement.dir = 'ltr';
         document.documentElement.lang = 'en';
       } else {
@@ -418,7 +506,7 @@
         btnEn.classList.remove('active');
         title.textContent = 'سياسة الخصوصية | تطبيق نور الإسلام';
         subtitle.textContent = 'تاريخ السريان وآخر تحديث: 2026';
-        urlBoxLabel.textContent = 'الرابط المباشر لسياسة الخصوصية لخانة (Privacy Policy URL) في App Store Connect:';
+        urlBoxLabel.textContent = 'الرابط الرسمي المعتمد لخانة (Privacy Policy URL) في App Store Connect:';
         document.documentElement.dir = 'rtl';
         document.documentElement.lang = 'ar';
       }

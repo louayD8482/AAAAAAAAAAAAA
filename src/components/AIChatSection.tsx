@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, HelpCircle, Sparkles, MessageSquare, ShieldAlert, Bot, Flag, Check, Copy, AlertTriangle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { ISLAMIC_AVATARS } from '../assets/avatars';
+import { API_BASE, getApiEndpoint } from '../lib/apiConfig';
 
 interface ChatMessage {
   id: string;
@@ -97,7 +98,7 @@ export default function AIChatSection({ isEn = false }: AIChatSectionProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/gemini/qa/stream', {
+      const response = await fetch(getApiEndpoint('/api/gemini/qa/stream'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: textToSend }),

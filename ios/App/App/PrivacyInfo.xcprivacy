@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Apple Privacy Manifest (PrivacyInfo.xcprivacy) for Noor Al-Islam (com.noor.alislam)
+      Compliant with WWDC & Apple Guideline 5.1.1 for iOS App Store submissions.
+    -->
+
+    <!-- 1. Tracking: Noor Al-Islam does NOT track users across third-party apps or websites -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <!-- 2. Tracking Domains: None (Zero tracking domains) -->
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <!-- 3. Collected Data Types: No personal data collected -->
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+
+    <!-- 4. Accessed API Types (Required Reason APIs) -->
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <!-- UserDefaults (CA92.1): Used solely to access app-specific local user preferences, bookmarks, and settings -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

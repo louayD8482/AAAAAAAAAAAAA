@@ -10,8 +10,8 @@
     "preferredContentMode": "mobile",
     "handleApplicationURL": true,
     "info": {
-      "NSLocationWhenInUseUsageDescription": "نحتاج إلى موقعك الجغرافي لحساب مواقيت الصلاة وتحديد اتجاه القبلة بدقة.",
-      "NSLocationAlwaysAndWhenInUseUsageDescription": "نحتاج إلى موقعك الجغرافي لحساب مواقيت الصلاة وتحديد اتجاه القبلة بدقة وتنبيهات الأذان.",
+      "NSLocationWhenInUseUsageDescription": "نحتاج للوصول إلى موقعك لتحديد مواقيت الصلاة واتجاه القبلة بدقة.",
+      "NSLocationAlwaysAndWhenInUseUsageDescription": "نحتاج للوصول إلى موقعك لتحديد مواقيت الصلاة واتجاه القبلة بدقة وتنبيهات الأذان.",
       "ITSAppUsesNonExemptEncryption": "false"
     }
   },

@@ -1152,45 +1152,21 @@ export default function SettingsModal({
                     <FolderArchive className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     <div>
                       <h6 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                        {isEn ? "Full Source Code Package (91 MB ZIP)" : "تحميل سورس كود كامل المشروع (Noor_Al_Islam.zip)"}
+                        {isEn ? "Full Source Code Package (ZIP)" : "تحميل حزمة سورس كود المشروع (ZIP)"}
                       </h6>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                        {isEn ? "Includes Xcode iOS project, all Adhan audios, Qur'an & full frontend" : "يحتوي مشروع Xcode كامل، الأصوات الأصلية عالية الدقة، المصاحف والتفاسير (187 ملفاً)"}
+                        {isEn ? "Includes Xcode iOS project, audios, Qur'an & full code" : "يحتوي مشروع Xcode كامل، الأصوات، المصاحف والتفاسير"}
                       </p>
                     </div>
                   </div>
-                  <a
-                    id="direct-zip-download-link"
-                    href="/api/download-zip"
-                    download="Noor_Al_Islam_SourceCode.zip"
-                    className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black rounded-lg text-xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs active:scale-95"
+                  <button
+                    id="direct-zip-download-btn"
+                    onClick={() => handleDownloadZip()}
+                    disabled={isExportingZip}
+                    className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black rounded-lg text-xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>{isEn ? "Download ZIP" : "تحميل السورس كود"}</span>
-                  </a>
-                </div>
-
-                <div className="flex items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-slate-900 rounded-lg text-xs border border-slate-200 dark:border-slate-800">
-                  <span className="font-mono text-[10.5px] text-amber-800 dark:text-amber-300 truncate" dir="ltr">
-                    {typeof window !== 'undefined' ? `${window.location.origin}/api/download-zip` : 'https://ais-pre-t3wezzjsald73v3nriwqhe-77969126070.europe-west2.run.app/api/download-zip'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(typeof window !== 'undefined' ? `${window.location.origin}/api/download-zip` : 'https://ais-pre-t3wezzjsald73v3nriwqhe-77969126070.europe-west2.run.app/api/download-zip', 'zip-url')}
-                    className="p-1 px-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-100 text-[10px] font-bold flex items-center gap-1 shrink-0 cursor-pointer active:scale-95"
-                    title="نسخ رابط التحميل المباشر"
-                  >
-                    {copiedKey === 'zip-url' ? (
-                      <>
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        <span className="text-emerald-700 dark:text-emerald-400">{isEn ? "Copied" : "تم النسخ"}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3 text-slate-500" />
-                        <span>{isEn ? "Copy" : "نسخ الرابط"}</span>
-                      </>
-                    )}
+                    <span>{isEn ? "Export ZIP" : "تصدير الحزمة"}</span>
                   </button>
                 </div>
               </div>
@@ -1219,26 +1195,16 @@ export default function SettingsModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              <div className="pt-1">
                 <button
                   id="export-source-btn"
                   onClick={() => handleDownloadZip()}
                   disabled={isExportingZip}
-                  className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+                  className="w-full py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                 >
                   <Download className="w-4 h-4" />
-                  <span>{isEn ? "Download iOS Package (ZIP)" : "تحميل حزمة الآيفون (ZIP)"}</span>
+                  <span>{isEn ? "Download iOS Project Package (ZIP)" : "تحميل حزمة مشروع الآيفون (ZIP)"}</span>
                 </button>
-
-                <a
-                  id="export-build-btn"
-                  href="/api/download-zip"
-                  download="Noor_Al_Islam_iPhone_iOS.zip"
-                  className="py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-center"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>{isEn ? "Direct Server Download" : "تحميل مباشر من السيرفر"}</span>
-                </a>
               </div>
             </div>
           </div>

@@ -46,6 +46,7 @@ import { offlineSurahs } from '../data/quran_text';
 import { QURAN_RECITERS, QuranReciter } from '../data/quran_reciters';
 import { SurahMetadata, SurahDetail, Ayah } from '../types';
 import { safeStorage } from '../utils/safeStorage';
+import { API_BASE, getApiEndpoint } from '../lib/apiConfig';
 
 const FONT_FAMILIES = [
   { id: 'amiri', name: 'خط حفص / عثماني (الأميري)', class: 'font-amiri' },
@@ -230,7 +231,7 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
     setIsLoadingTafsir(true);
     setTafsirResult(null);
     try {
-      const res = await fetch('/api/gemini/tafsir', {
+      const res = await fetch(getApiEndpoint('/api/gemini/tafsir'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ surahNumber: surahNum, surahName: name }),
@@ -253,7 +254,7 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
     setActiveTafsirAyah(ayahNum);
     setTafsirResult(null);
     try {
-      const res = await fetch('/api/gemini/tafsir', {
+      const res = await fetch(getApiEndpoint('/api/gemini/tafsir'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ surahNumber: surahNum, surahName, ayahNumber: ayahNum }),
@@ -280,7 +281,7 @@ export default function QuranSection({ isEn = false }: QuranSectionProps) {
     const sName = surahMeta ? surahMeta.name : `سورة رقم ${lookupSurah}`;
 
     try {
-      const res = await fetch('/api/gemini/tafsir', {
+      const res = await fetch(getApiEndpoint('/api/gemini/tafsir'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
