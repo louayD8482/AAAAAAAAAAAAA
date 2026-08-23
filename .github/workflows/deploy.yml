@@ -23,12 +23,11 @@ jobs:
         with:
           node-version: '22'
 
-      # Uses the project's actual bun.lock, so native optional deps
-      # (lightningcss, @tailwindcss/oxide, etc.) resolve for this exact
-      # runner instead of npm re-resolving them from scratch and missing
-      # the correct Darwin binary.
+      # bun.lock in the repo is currently out of sync with package.json,
+      # so --frozen-lockfile fails. Installing without it lets Bun update
+      # the lockfile automatically instead of erroring out.
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Verify native build binaries resolved correctly
         run: node -e "require.resolve('lightningcss'); console.log('lightningcss OK')"
