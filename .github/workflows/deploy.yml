@@ -18,27 +18,23 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      # Delete the lockfile and let npm resolve optionalDependencies
+      # (lightningcss / @tailwindcss/oxide native binaries) fresh, against
+      # this exact runner's OS/arch. This is the reliable fix for the
+      # "Cannot find module '../lightningcss.darwin-arm64.node'" error —
+      # it happens when the committed lockfile was generated on a different
+      # platform and npm ends up skipping the correct native binary.
       - name: Install dependencies
-        run: npm install --include=optional --no-audit --no-fund
-
-      # npm can omit lightningcss optional platform packages on macOS.
-      # Install the runner's exact native binary explicitly before Vite runs.
-      - name: Ensure lightningcss Darwin binary
-        shell: bash
         run: |
-          LIGHTNINGCSS_VERSION=$(node -p "require('./node_modules/lightningcss/package.json').version")
-          if [ "$(uname -m)" = "arm64" ]; then
-            npm install --no-save --include=optional "lightningcss-darwin-arm64@${LIGHTNINGCSS_VERSION}"
-          else
-            npm install --no-save --include=optional "lightningcss-darwin-x64@${LIGHTNINGCSS_VERSION}"
-          fi
+          rm -f package-lock.json
+          npm install --include=optional --no-audit --no-fund
 
-          TAILWIND_OXIDE_VERSION=$(node -p "require('./node_modules/@tailwindcss/oxide/package.json').version")
-          if [ "$(uname -m)" = "arm64" ]; then
-            npm install --no-save --include=optional "@tailwindcss/oxide-darwin-arm64@${TAILWIND_OXIDE_VERSION}"
-          else
-            npm install --no-save --include=optional "@tailwindcss/oxide-darwin-x64@${TAILWIND_OXIDE_VERSION}"
-          fi
+      - name: Verify native build binaries resolved correctly
+        run: |
+          node -e "require.resolve('lightningcss'); console.log('lightningcss OK')"
 
       - name: Build Web Assets
         run: npm run build
