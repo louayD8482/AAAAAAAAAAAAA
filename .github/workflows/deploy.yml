@@ -1,4 +1,4 @@
-name: Build iOS App (IPA & Xcode Archive)
+name: Build iOS IPA
 
 on:
   push:
@@ -7,89 +7,58 @@ on:
 
 jobs:
   build-ios:
-    name: Build & Package iOS Application
-    runs-on: macos-14
+    runs-on: macos-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Install Node Dependencies
-        run: |
-          npm install --include=optional
-          npm install --no-save @rollup/rollup-darwin-arm64 @rollup/rollup-darwin-x64 @esbuild/darwin-arm64 @esbuild/darwin-x64 || true
+      - name: Install dependencies
+        run: npm install --include=optional --no-audit --no-fund
 
-      - name: Build Web Application
+      # npm can omit lightningcss optional platform packages on macOS.
+      # Install the runner's exact native binary explicitly before Vite runs.
+      - name: Ensure lightningcss Darwin binary
+        shell: bash
+        run: |
+          LIGHTNINGCSS_VERSION=$(node -p "require('./node_modules/lightningcss/package.json').version")
+          if [ "$(uname -m)" = "arm64" ]; then
+            npm install --no-save --include=optional "lightningcss-darwin-arm64@${LIGHTNINGCSS_VERSION}"
+          else
+            npm install --no-save --include=optional "lightningcss-darwin-x64@${LIGHTNINGCSS_VERSION}"
+          fi
+
+      - name: Build Web Assets
         run: npm run build
 
       - name: Install Capacitor CLI
         run: npm install @capacitor/cli @capacitor/core @capacitor/ios
 
-      - name: Sync Capacitor iOS Platform
+      - name: Add Capacitor iOS Platform
+        run: npx cap add ios
+
+      - name: Sync Capacitor iOS
         run: npx cap sync ios
 
-      - name: Select Xcode Version
-        run: sudo xcode-select -switch /Applications/Xcode_15.4.app || true
-
-      - name: Resolve Swift Package Dependencies
+      - name: Build Xcode Archive
         run: |
-          cd ios/App
-          xcodebuild -resolvePackageDependencies -project App.xcodeproj -clonedSourcePackagesDirPath DerivedData/SourcePackages || true
-
-      - name: Build Xcode Archive (CI Safe)
-        run: |
-          cd ios/App
-          mkdir -p build
-          
-          # Build Archive using generic iOS destination and CI signing bypass
-          xcodebuild archive \
-            -project App.xcodeproj \
-            -scheme App \
-            -configuration Release \
-            -destination "generic/platform=iOS" \
-            -archivePath build/App.xcarchive \
-            -derivedDataPath build/DerivedData \
-            -skipPackagePluginValidation \
-            -skipMacroValidation \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_ENTITLEMENTS="" \
-            COMPILER_INDEX_STORE_ENABLE=NO
-
-      - name: Package IPA from Archive
-        run: |
-          cd ios/App/build
-          mkdir -p Payload
-          
-          # Find compiled .app bundle
-          APP_PATH=$(find App.xcarchive/Products/Applications -name "*.app" -maxdepth 1 | head -n 1)
-          
-          if [ -d "$APP_PATH" ]; then
-            echo "Found compiled app at: $APP_PATH"
-            cp -R "$APP_PATH" Payload/
-            zip -r -q Noor_Al_Islam_Unsigned.ipa Payload
-            echo "Successfully generated Noor_Al_Islam_Unsigned.ipa"
+          cd ios
+          if [ -d "App" ]; then cd App; fi
+          WORKSPACE=$(ls -d *.xcworkspace 2>/dev/null | head -n 1)
+          if [ -z "$WORKSPACE" ]; then
+            PROJECT=$(ls -d *.xcodeproj 2>/dev/null | head -n 1)
+            xcodebuild -project "$PROJECT" -scheme App -configuration Release -archivePath build/App.xcarchive archive CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO
           else
-            echo "App bundle not found in archive products"
-            exit 1
+            xcodebuild -workspace "$WORKSPACE" -scheme App -configuration Release -archivePath build/App.xcarchive archive CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO
           fi
 
-      - name: Upload IPA Artifact
+      - name: Upload iOS Archive Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Noor_Al_Islam_iOS_IPA
-          path: ios/App/build/Noor_Al_Islam_Unsigned.ipa
-          retention-days: 14
-
-      - name: Upload Xcode Archive Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Noor_Al_Islam_Xcode_Archive
-          path: ios/App/build/App.xcarchive
-          retention-days: 14
+          name: ios-archive
+          path: ios/**/build/App.xcarchive
