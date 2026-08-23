@@ -1656,6 +1656,10 @@ export default function App() {
           <WelcomeSplashScreen
             isEn={isEn}
             onEnter={(secId) => {
+              try {
+                safeStorage.setItem('noor_hide_welcome_splash', 'true');
+                safeStorage.setItem('noor_has_seen_welcome_onboarding', 'true');
+              } catch (e) {}
               setShowWelcomeSplash(false);
               if (secId) {
                 handleNavigateToSection(secId);

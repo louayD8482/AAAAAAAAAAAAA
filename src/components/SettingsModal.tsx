@@ -27,7 +27,11 @@ import {
   Shield,
   Database,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Code2,
+  Copy,
+  Terminal,
+  FolderArchive
 } from 'lucide-react';
 import { AppSettings } from '../types';
 import { PRAYER_COUNTRIES } from '../data/prayerCities';
@@ -71,6 +75,14 @@ export default function SettingsModal({
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [storageFeedback, setStorageFeedback] = useState<string | null>(null);
   const [confirmClearType, setConfirmClearType] = useState<'notifications' | 'streaks' | 'allCache' | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, key: string) => {
+    triggerHaptic('selection');
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2500);
+  };
 
   const handleClearNotificationsCache = () => {
     triggerHaptic('warning');
@@ -1069,7 +1081,124 @@ export default function SettingsModal({
             </div>
           </div>
 
-          {/* 6. Complete Export Application for iPhone (iOS ZIP) */}
+          {/* 6. Developer Environment & Full Source Code Center */}
+          <div className="space-y-3.5 pt-2">
+            <h5 className="text-xs font-black text-slate-800 dark:text-slate-200 border-r-4 rtl:border-r-4 ltr:border-l-4 border-teal-500 pr-2 ltr:pl-2 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Code2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                <span>{isEn ? "Developer Workspace & Source Code Hub" : "روابط بيئة التطوير وتحميل سورس كود المشروع الكامل"}</span>
+              </span>
+              <span className="text-[10px] text-teal-700 dark:text-teal-300 font-extrabold bg-teal-50 dark:bg-teal-950/40 px-2 py-0.5 rounded-full border border-teal-500/20">
+                {isEn ? "Live & Full (91 MB)" : "رسمي ومباشر (91 MB) ✓"}
+              </span>
+            </h5>
+
+            <div className="p-4 bg-gradient-to-br from-teal-500/10 via-emerald-500/10 to-transparent dark:from-teal-950/40 dark:to-slate-950/40 rounded-2xl border border-teal-500/30 space-y-3.5">
+              
+              {/* Development Environment Box */}
+              <div className="p-3 bg-white dark:bg-[#060D0E] rounded-xl border border-teal-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <div>
+                      <h6 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        {isEn ? "Live Development Environment" : "رابط بيئة التطوير المباشرة (Dev Environment)"}
+                      </h6>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        {isEn ? "Instant preview & development sandbox" : "معاينة حية ومحدثة لحظياً على سحابة Google Cloud"}
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href="https://ais-dev-t3wezzjsald73v3nriwqhe-77969126070.europe-west2.run.app"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2.5 py-1 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <span>{isEn ? "Open" : "فتح"}</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-slate-900 rounded-lg text-xs border border-slate-200 dark:border-slate-800">
+                  <span className="font-mono text-[10.5px] text-teal-800 dark:text-teal-300 truncate" dir="ltr">
+                    https://ais-dev-t3wezzjsald73v3nriwqhe-77969126070.europe-west2.run.app
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard('https://ais-dev-t3wezzjsald73v3nriwqhe-77969126070.europe-west2.run.app', 'dev-url')}
+                    className="p-1 px-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-100 text-[10px] font-bold flex items-center gap-1 shrink-0 cursor-pointer active:scale-95"
+                    title="نسخ الرابط"
+                  >
+                    {copiedKey === 'dev-url' ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span className="text-emerald-700 dark:text-emerald-400">{isEn ? "Copied" : "تم النسخ"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3 text-slate-500" />
+                        <span>{isEn ? "Copy" : "نسخ"}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Complete Source Code Download Box */}
+              <div className="p-3 bg-white dark:bg-[#060D0E] rounded-xl border border-amber-500/25 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FolderArchive className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <h6 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        {isEn ? "Full Source Code Package (91 MB ZIP)" : "تحميل سورس كود كامل المشروع (Noor_Al_Islam.zip)"}
+                      </h6>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        {isEn ? "Includes Xcode iOS project, all Adhan audios, Qur'an & full frontend" : "يحتوي مشروع Xcode كامل، الأصوات الأصلية عالية الدقة، المصاحف والتفاسير (187 ملفاً)"}
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    id="direct-zip-download-link"
+                    href="/api/download-zip"
+                    download="Noor_Al_Islam_SourceCode.zip"
+                    className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black rounded-lg text-xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{isEn ? "Download ZIP" : "تحميل السورس كود"}</span>
+                  </a>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-slate-900 rounded-lg text-xs border border-slate-200 dark:border-slate-800">
+                  <span className="font-mono text-[10.5px] text-amber-800 dark:text-amber-300 truncate" dir="ltr">
+                    {typeof window !== 'undefined' ? `${window.location.origin}/api/download-zip` : 'https://ais-pre-t3wezzjsald73v3nriwqhe-77969126070.europe-west2.run.app/api/download-zip'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(typeof window !== 'undefined' ? `${window.location.origin}/api/download-zip` : 'https://ais-pre-t3wezzjsald73v3nriwqhe-77969126070.europe-west2.run.app/api/download-zip', 'zip-url')}
+                    className="p-1 px-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-100 text-[10px] font-bold flex items-center gap-1 shrink-0 cursor-pointer active:scale-95"
+                    title="نسخ رابط التحميل المباشر"
+                  >
+                    {copiedKey === 'zip-url' ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span className="text-emerald-700 dark:text-emerald-400">{isEn ? "Copied" : "تم النسخ"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3 text-slate-500" />
+                        <span>{isEn ? "Copy" : "نسخ الرابط"}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* 7. Complete Export Application for iPhone (iOS ZIP) */}
           <div className="space-y-3.5 pt-2">
             <h5 className="text-xs font-black text-slate-800 dark:text-slate-200 border-r-4 rtl:border-r-4 ltr:border-l-4 border-amber-500 pr-2 ltr:pl-2 flex items-center gap-2">
               <span>{isEn ? "Export Application for iPhone & iOS (ZIP)" : "تصدير وتحميل التطبيق للآيفون (iOS & Xcode ZIP)"}</span>

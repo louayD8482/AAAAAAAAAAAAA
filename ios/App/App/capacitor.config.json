@@ -1,0 +1,52 @@
+{
+	"appId": "com.noor.alislam",
+	"appName": "نور الإسلام",
+	"webDir": "dist",
+	"bundledWebRuntime": false,
+	"ios": {
+		"minDeploymentTarget": "15.0",
+		"contentInset": "always",
+		"scrollEnabled": true,
+		"preferredContentMode": "mobile",
+		"handleApplicationURL": true,
+		"info": {
+			"NSLocationWhenInUseUsageDescription": "نحتاج إلى موقعك الجغرافي لحساب مواقيت الصلاة وتحديد اتجاه القبلة بدقة.",
+			"NSLocationAlwaysAndWhenInUseUsageDescription": "نحتاج إلى موقعك الجغرافي لحساب مواقيت الصلاة وتحديد اتجاه القبلة بدقة وتنبيهات الأذان.",
+			"ITSAppUsesNonExemptEncryption": "false"
+		}
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 0,
+			"launchAutoHide": true,
+			"launchFadeOutDuration": 0,
+			"backgroundColor": "#070D0E",
+			"androidSplashResourceName": "splash",
+			"androidScaleType": "CENTER_CROP",
+			"showSpinner": false,
+			"splashFullScreen": true,
+			"splashImmersive": true
+		},
+		"LocalNotifications": {
+			"sound": "adhan.wav"
+		},
+		"StatusBar": {
+			"overlaysWebView": true,
+			"style": "DARK"
+		},
+		"Keyboard": {
+			"resize": "body",
+			"style": "DARK"
+		}
+	},
+	"packageClassList": [
+		"AppPlugin",
+		"GeolocationPlugin",
+		"HapticsPlugin",
+		"LocalNotificationsPlugin",
+		"PreferencesPlugin",
+		"SharePlugin",
+		"SplashScreenPlugin",
+		"StatusBarPlugin"
+	]
+}

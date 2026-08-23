@@ -6,10 +6,13 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
+
+const currentDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
 
 const app = express();
 const PORT = 3000;
@@ -17,8 +20,8 @@ const PORT = 3000;
 app.use(express.json());
 
 // Health check endpoint for Cloud Run
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
+app.get(["/api/health", "/healthz", "/_health"], (req, res) => {
+  res.status(200).json({ status: "ok" });
 });
 
 // Lazy-initialize Gemini client to avoid startup crashes if key is initially empty
@@ -164,26 +167,94 @@ app.post("/api/gemini/qa", async (req, res) => {
 });
 
 // 3. API route to download project ZIP file directly
-app.get("/api/download-zip", async (req, res) => {
+app.get(["/api/download-zip", "/api/download-project", "/project_source.zip", "/Noor_Al_Islam_SourceCode.zip"], async (req, res) => {
   try {
-    const zipPath = path.resolve(process.cwd(), "project_source.zip");
-    const { execSync } = await import("child_process");
-    try {
-      execSync("python3 make_zip.py", { cwd: process.cwd(), timeout: 30000 });
-    } catch (e) {
-      console.error("Error creating zip:", e);
+    const candidatePaths = [
+      path.resolve(process.cwd(), "dist", "project_source.zip"),
+      path.resolve(process.cwd(), "public", "project_source.zip"),
+      path.resolve(process.cwd(), "project_source.zip"),
+      path.resolve(currentDir, "project_source.zip"),
+      path.resolve(currentDir, "..", "project_source.zip"),
+      path.resolve(currentDir, "public", "project_source.zip"),
+      path.resolve(currentDir, "dist", "project_source.zip"),
+    ];
+
+    let foundZipPath: string | null = null;
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        foundZipPath = p;
+        break;
+      }
+    }
+    
+    if (!foundZipPath) {
+      // Try generating via Node.js make_zip.js
+      try {
+        const { execSync } = await import("child_process");
+        const scriptPath = path.resolve(process.cwd(), "make_zip.js");
+        if (fs.existsSync(scriptPath)) {
+          execSync("node make_zip.js", { cwd: process.cwd(), timeout: 60000 });
+          const defaultPath = path.resolve(process.cwd(), "project_source.zip");
+          if (fs.existsSync(defaultPath)) {
+            foundZipPath = defaultPath;
+          }
+        }
+      } catch (e) {
+        console.error("Node zip creation failed:", e);
+      }
     }
 
-    if (!fs.existsSync(zipPath)) {
-      return res.status(500).json({ error: "ملف الـ ZIP غير موجود" });
+    if (foundZipPath && fs.existsSync(foundZipPath)) {
+      const stat = fs.statSync(foundZipPath);
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Length", stat.size.toString());
+      res.setHeader("Content-Disposition", 'attachment; filename="Noor_Al_Islam_SourceCode.zip"');
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      return res.sendFile(foundZipPath);
     }
+
+    // Fallback: Build zip in Node.js using JSZip if no pre-built file is found
+    const JSZipModule = await import("jszip");
+    const JSZip = (JSZipModule.default || JSZipModule) as any;
+    const zip = new JSZip();
+
+    const ignoreDirs = new Set(["node_modules", "dist", ".git", ".cache", ".upm", "__pycache__"]);
+    const ignoreFiles = new Set(["project_source.zip", "project_source.tmp.zip", "Info.plist.bak"]);
+
+    function addDirToZip(currentDir: string, zipFolder: any) {
+      const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(currentDir, entry.name);
+        if (entry.isDirectory()) {
+          if (!ignoreDirs.has(entry.name)) {
+            const nextZipFolder = zipFolder.folder(entry.name);
+            addDirToZip(fullPath, nextZipFolder);
+          }
+        } else if (entry.isFile()) {
+          if (!ignoreFiles.has(entry.name) && !entry.name.endsWith(".tmp") && !entry.name.endsWith(".bak")) {
+            const fileData = fs.readFileSync(fullPath);
+            zipFolder.file(entry.name, fileData);
+          }
+        }
+      }
+    }
+
+    addDirToZip(process.cwd(), zip);
+
+    const buffer = await zip.generateAsync({
+      type: "nodebuffer",
+      compression: "DEFLATE",
+      compressionOptions: { level: 3 },
+    });
 
     res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Length", buffer.length.toString());
     res.setHeader("Content-Disposition", 'attachment; filename="Noor_Al_Islam_SourceCode.zip"');
-    res.sendFile(zipPath);
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    return res.send(buffer);
   } catch (error: any) {
     console.error("Zip download error:", error);
-    res.status(500).json({ error: "فشل تحميل ملف الـ ZIP" });
+    return res.status(500).json({ error: "فشل تحميل ملف الـ ZIP" });
   }
 });
 
@@ -231,15 +302,28 @@ async function startServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), "dist");
+    const indexPath = path.join(distPath, "index.html");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.sendFile(path.join(process.cwd(), "index.html"));
+      }
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  const shutdown = () => {
+    server.close(() => {
+      process.exit(0);
+    });
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
 
 startServer();

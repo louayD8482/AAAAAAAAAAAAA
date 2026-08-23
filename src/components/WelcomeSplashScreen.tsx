@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Clock, Sparkles, Bot, Leaf, ArrowLeft } from 'lucide-react';
+import { BookOpen, Clock, Sparkles, Bot, Leaf, ArrowLeft, X } from 'lucide-react';
 import { ISLAMIC_AVATARS } from '../assets/avatars';
 import { safeStorage } from '../utils/safeStorage';
 
@@ -15,24 +15,42 @@ export default function WelcomeSplashScreen({
   const [dontShowAgain, setDontShowAgain] = useState<boolean>(true);
 
   const handleEnter = (sectionId?: string) => {
-    if (dontShowAgain) {
+    // Always persist to localStorage on user interaction
+    try {
       safeStorage.setItem('noor_hide_welcome_splash', 'true');
       safeStorage.setItem('noor_has_seen_welcome_onboarding', 'true');
+    } catch (e) {
+      console.warn('Storage write failed', e);
     }
     onEnter(sectionId);
   };
 
   return (
     <div
+      id="welcome-splash-overlay"
       className="fixed inset-0 z-[99999] flex items-center justify-center p-3.5 sm:p-5 bg-[#050B0D]/95 backdrop-blur-md overflow-y-auto"
       style={{
         paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)',
-        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)'
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+        paddingLeft: 'max(env(safe-area-inset-left, 0px), 16px)',
+        paddingRight: 'max(env(safe-area-inset-right, 0px), 16px)'
       }}
     >
       <div
+        id="welcome-splash-card"
         className="w-full max-w-sm sm:max-w-md bg-[#071315] text-[#E2EAEB] border border-[#143034] rounded-[28px] sm:rounded-[32px] p-5 sm:p-7 shadow-2xl relative flex flex-col items-center text-center my-auto transition-none"
       >
+        {/* Quick Close / Skip button */}
+        <button
+          type="button"
+          onClick={() => handleEnter()}
+          className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+          title={isEn ? "Close" : "إغلاق"}
+          aria-label="Close"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         {/* Bismillah Header Box */}
         <div className="w-full py-2.5 px-4 rounded-2xl border border-amber-600/40 bg-[#071719] text-amber-300 text-sm sm:text-base font-amiri font-bold mb-5 flex items-center justify-center shadow-inner tracking-wide">
           « بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ »
@@ -106,7 +124,6 @@ export default function WelcomeSplashScreen({
           className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#22C55E] via-[#F59E0B] to-[#FF5722] hover:brightness-105 active:scale-[0.98] text-slate-950 font-black text-sm sm:text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-all duration-150"
         >
           <ArrowLeft className="w-4 h-4 text-slate-950 stroke-[3]" />
-          <ArrowLeft className="w-4 h-4 text-slate-950 stroke-[3] -mr-1" />
           <span>{isEn ? 'Enter Application 🕌' : 'الدخول إلى التطبيق 🕌'}</span>
         </button>
 
@@ -129,3 +146,4 @@ export default function WelcomeSplashScreen({
     </div>
   );
 }
+
