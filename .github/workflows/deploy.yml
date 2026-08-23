@@ -13,40 +13,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Update npm
-        run: npm install -g npm@latest
-
-      # Delete the lockfile and let npm resolve optionalDependencies
-      # (lightningcss / @tailwindcss/oxide native binaries) fresh, against
-      # this exact runner's OS/arch. This is the reliable fix for the
-      # "Cannot find module '../lightningcss.darwin-arm64.node'" error —
-      # it happens when the committed lockfile was generated on a different
-      # platform and npm ends up skipping the correct native binary.
+      # Uses the project's actual bun.lock, so native optional deps
+      # (lightningcss, @tailwindcss/oxide, etc.) resolve for this exact
+      # runner instead of npm re-resolving them from scratch and missing
+      # the correct Darwin binary.
       - name: Install dependencies
-        run: |
-          rm -f package-lock.json
-          npm install --include=optional --no-audit --no-fund
+        run: bun install --frozen-lockfile
 
       - name: Verify native build binaries resolved correctly
-        run: |
-          node -e "require.resolve('lightningcss'); console.log('lightningcss OK')"
+        run: node -e "require.resolve('lightningcss'); console.log('lightningcss OK')"
 
       - name: Build Web Assets
-        run: npm run build
+        run: bun run build
 
       - name: Install Capacitor CLI
-        run: npm install @capacitor/cli @capacitor/core @capacitor/ios
+        run: bun add @capacitor/cli @capacitor/core @capacitor/ios
 
+      # The ios/ folder is already committed to the repo (added and
+      # customized previously), so "cap add ios" must not run again —
+      # it only initializes a platform that doesn't exist yet.
       - name: Add Capacitor iOS Platform
-        run: npx cap add ios
+        run: |
+          if [ -d "ios" ]; then
+            echo "ios/ already exists in repo — skipping cap add"
+          else
+            bunx cap add ios
+          fi
 
       - name: Sync Capacitor iOS
-        run: npx cap sync ios
+        run: bunx cap sync ios
 
       - name: Build Xcode Archive
         run: |
