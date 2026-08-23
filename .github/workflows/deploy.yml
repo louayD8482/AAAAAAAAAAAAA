@@ -13,59 +13,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Install dependencies
-        run: bun install
+        run: npm install --include=optional --no-audit --no-fund
 
-      - name: Verify native build binaries resolved correctly
-        run: node -e "require.resolve('lightningcss'); console.log('lightningcss OK')"
-
-      - name: Build Web Assets
-        run: bun run build
-
-      - name: Install Capacitor CLI
-        run: bun add @capacitor/cli @capacitor/core @capacitor/ios
-
-      - name: Add Capacitor iOS Platform
+      # npm can omit lightningcss optional platform packages on macOS.
+      # Install the runner's exact native binary explicitly before Vite runs.
+      - name: Ensure lightningcss Darwin binary
+        shell: bash
         run: |
-          if [ -d "ios" ]; then
-            echo "ios/ already exists in repo — skipping cap add"
+          LIGHTNINGCSS_VERSION=$(node -p "require('./node_modules/lightningcss/package.json').version")
+          if [ "$(uname -m)" = "arm64" ]; then
+            npm install --no-save --include=optional "lightningcss-darwin-arm64@${LIGHTNINGCSS_VERSION}"
           else
-            bunx cap add ios
+            npm install --no-save --include=optional "lightningcss-darwin-x64@${LIGHTNINGCSS_VERSION}"
           fi
 
+          TAILWIND_OXIDE_VERSION=$(node -p "require('./node_modules/@tailwindcss/oxide/package.json').version")
+          if [ "$(uname -m)" = "arm64" ]; then
+            npm install --no-save --include=optional "@tailwindcss/oxide-darwin-arm64@${TAILWIND_OXIDE_VERSION}"
+          else
+            npm install --no-save --include=optional "@tailwindcss/oxide-darwin-x64@${TAILWIND_OXIDE_VERSION}"
+          fi
+
+      - name: Build Web Assets
+        run: npm run build
+
+      - name: Install Capacitor CLI
+        run: npm install @capacitor/cli @capacitor/core @capacitor/ios
+
+      - name: Add Capacitor iOS Platform
+        run: npx cap add ios
+
       - name: Sync Capacitor iOS
-        run: bunx cap sync ios
-
-      - name: Install Pillow for icon processing
-        run: pip3 install --break-system-packages pillow
-
-      - name: Fix App Store icon (resize to 1024x1024, remove alpha)
-        run: |
-          ICON="ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png"
-          sips -s format png --resampleHeightWidth 1024 1024 "$ICON" --out "$ICON"
-          python3 -c "
-from PIL import Image
-img = Image.open('$ICON')
-if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
-    bg = Image.new('RGB', img.size, (255, 255, 255))
-    img = img.convert('RGBA')
-    bg.paste(img, mask=img.split()[-1])
-    bg.save('$ICON')
-    print('Alpha removed')
-else:
-    img.convert('RGB').save('$ICON')
-    print('No alpha channel found, saved as RGB')
-"
+        run: npx cap sync ios
 
       - name: Build Xcode Archive
         run: |
