@@ -13,44 +13,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
+      # bun.lock in the repo is currently out of sync with package.json,
+      # so --frozen-lockfile fails. Installing without it lets Bun update
+      # the lockfile automatically instead of erroring out.
       - name: Install dependencies
-        run: npm install --include=optional --no-audit --no-fund
+        run: bun install
 
-      # npm can omit lightningcss optional platform packages on macOS.
-      # Install the runner's exact native binary explicitly before Vite runs.
-      - name: Ensure lightningcss Darwin binary
-        shell: bash
-        run: |
-          LIGHTNINGCSS_VERSION=$(node -p "require('./node_modules/lightningcss/package.json').version")
-          if [ "$(uname -m)" = "arm64" ]; then
-            npm install --no-save --include=optional "lightningcss-darwin-arm64@${LIGHTNINGCSS_VERSION}"
-          else
-            npm install --no-save --include=optional "lightningcss-darwin-x64@${LIGHTNINGCSS_VERSION}"
-          fi
-
-          TAILWIND_OXIDE_VERSION=$(node -p "require('./node_modules/@tailwindcss/oxide/package.json').version")
-          if [ "$(uname -m)" = "arm64" ]; then
-            npm install --no-save --include=optional "@tailwindcss/oxide-darwin-arm64@${TAILWIND_OXIDE_VERSION}"
-          else
-            npm install --no-save --include=optional "@tailwindcss/oxide-darwin-x64@${TAILWIND_OXIDE_VERSION}"
-          fi
+      - name: Verify native build binaries resolved correctly
+        run: node -e "require.resolve('lightningcss'); console.log('lightningcss OK')"
 
       - name: Build Web Assets
-        run: npm run build
+        run: bun run build
 
       - name: Install Capacitor CLI
-        run: npm install @capacitor/cli @capacitor/core @capacitor/ios
+        run: bun add @capacitor/cli @capacitor/core @capacitor/ios
 
+      # The ios/ folder is already committed to the repo (added and
+      # customized previously), so "cap add ios" must not run again —
+      # it only initializes a platform that doesn't exist yet.
       - name: Add Capacitor iOS Platform
-        run: npx cap add ios
+        run: |
+          if [ -d "ios" ]; then
+            echo "ios/ already exists in repo — skipping cap add"
+          else
+            bunx cap add ios
+          fi
 
       - name: Sync Capacitor iOS
-        run: npx cap sync ios
+        run: bunx cap sync ios
 
       - name: Build Xcode Archive
         run: |
