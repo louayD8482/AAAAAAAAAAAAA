@@ -23,9 +23,6 @@ jobs:
         with:
           node-version: '22'
 
-      # bun.lock in the repo is currently out of sync with package.json,
-      # so --frozen-lockfile fails. Installing without it lets Bun update
-      # the lockfile automatically instead of erroring out.
       - name: Install dependencies
         run: bun install
 
@@ -38,9 +35,6 @@ jobs:
       - name: Install Capacitor CLI
         run: bun add @capacitor/cli @capacitor/core @capacitor/ios
 
-      # The ios/ folder is already committed to the repo (added and
-      # customized previously), so "cap add ios" must not run again —
-      # it only initializes a platform that doesn't exist yet.
       - name: Add Capacitor iOS Platform
         run: |
           if [ -d "ios" ]; then
@@ -51,6 +45,27 @@ jobs:
 
       - name: Sync Capacitor iOS
         run: bunx cap sync ios
+
+      - name: Install Pillow for icon processing
+        run: pip3 install --break-system-packages pillow
+
+      - name: Fix App Store icon (resize to 1024x1024, remove alpha)
+        run: |
+          ICON="ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png"
+          sips -s format png --resampleHeightWidth 1024 1024 "$ICON" --out "$ICON"
+          python3 -c "
+from PIL import Image
+img = Image.open('$ICON')
+if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+    bg = Image.new('RGB', img.size, (255, 255, 255))
+    img = img.convert('RGBA')
+    bg.paste(img, mask=img.split()[-1])
+    bg.save('$ICON')
+    print('Alpha removed')
+else:
+    img.convert('RGB').save('$ICON')
+    print('No alpha channel found, saved as RGB')
+"
 
       - name: Build Xcode Archive
         run: |
