@@ -20,7 +20,9 @@ jobs:
           node-version: '22'
 
       - name: Install Node Dependencies
-        run: npm ci || npm install
+        run: |
+          npm install --include=optional
+          npm install --no-save @rollup/rollup-darwin-arm64 @rollup/rollup-darwin-x64 @esbuild/darwin-arm64 @esbuild/darwin-x64 || true
 
       - name: Build Web Application
         run: npm run build
