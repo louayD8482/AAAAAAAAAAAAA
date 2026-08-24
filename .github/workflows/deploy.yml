@@ -56,9 +56,14 @@ jobs:
         shell: bash
         run: npm install @capacitor/cli @capacitor/core @capacitor/ios --no-audit --no-fund
 
-      - name: Add Capacitor iOS platform
+      - name: Add Capacitor iOS platform when missing
         shell: bash
-        run: npx cap add ios
+        run: |
+          if [ -d "ios" ]; then
+            echo "ios directory already exists; keeping the existing native project"
+          else
+            npx cap add ios
+          fi
 
       - name: Sync Capacitor iOS
         shell: bash
