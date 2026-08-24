@@ -8,12 +8,7 @@
     "contentInset": "always",
     "scrollEnabled": true,
     "preferredContentMode": "mobile",
-    "handleApplicationURL": true,
-    "info": {
-      "NSLocationWhenInUseUsageDescription": "نحتاج للوصول إلى موقعك لتحديد مواقيت الصلاة واتجاه القبلة بدقة.",
-      "NSLocationAlwaysAndWhenInUseUsageDescription": "نحتاج للوصول إلى موقعك لتحديد مواقيت الصلاة واتجاه القبلة بدقة وتنبيهات الأذان.",
-      "ITSAppUsesNonExemptEncryption": "false"
-    }
+    "handleApplicationURL": true
   },
   "plugins": {
     "SplashScreen": {
