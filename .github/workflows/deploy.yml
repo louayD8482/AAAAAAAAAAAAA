@@ -1,23 +1,115 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install web dependencies
+        shell: bash
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --include=optional --no-audit --no-fund
+
+      - name: Install native optional dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          MACHINE="$(uname -m)"
+
+          LIGHTNINGCSS_VERSION="$(node -p "require('./node_modules/lightningcss/package.json').version")"
+          TAILWIND_OXIDE_VERSION="$(node -p "require('./node_modules/@tailwindcss/oxide/package.json').version")"
+
+          if [ "$MACHINE" = "arm64" ]; then
+            npm install --no-save --include=optional "lightningcss-darwin-arm64@${LIGHTNINGCSS_VERSION}"
+            npm install --no-save --include=optional "@tailwindcss/oxide-darwin-arm64@${TAILWIND_OXIDE_VERSION}"
+          else
+            npm install --no-save --include=optional "lightningcss-darwin-x64@${LIGHTNINGCSS_VERSION}"
+            npm install --no-save --include=optional "@tailwindcss/oxide-darwin-x64@${TAILWIND_OXIDE_VERSION}"
+          fi
+
+          node -e "require('lightningcss'); require('@tailwindcss/oxide'); console.log('Native CSS bindings loaded successfully')"
+
+      - name: Build Web Assets
+        shell: bash
+        run: npm run build
+
+      - name: Install Capacitor packages
+        shell: bash
+        run: npm install @capacitor/cli @capacitor/core @capacitor/ios --no-audit --no-fund
+
+      - name: Add Capacitor iOS platform
+        shell: bash
+        run: npx cap add ios
+
+      - name: Sync Capacitor iOS
+        shell: bash
+        run: npx cap sync ios
+
+      - name: Print Xcode diagnostics
+        shell: bash
+        run: |
+          xcodebuild -version
+          echo "Working directory: $(pwd)"
+          find ios -maxdepth 3 \( -name '*.xcworkspace' -o -name '*.xcodeproj' \) -print
+
       - name: Build Xcode Archive
         shell: bash
         run: |
           set -o pipefail
           cd ios
-          if [ -d "App" ]; then cd App; fi
-          WORKSPACE=<LaTex>(find . -maxdepth 1 -name "*.xcworkspace" -print -quit)           PROJECT=</LaTex>(find . -maxdepth 1 -name "*.xcodeproj" -print -quit)
+          if [ -d "App" ]; then
+            cd App
+          fi
 
-          if [ -n "<LaTex>WORKSPACE" ]; then             xcodebuild archive \               -workspace "</LaTex>WORKSPACE" \
+          WORKSPACE="$(find . -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          PROJECT="$(find . -maxdepth 1 -name '*.xcodeproj' -print -quit)"
+          ARCHIVE_PATH="$PWD/build/App.xcarchive"
+          mkdir -p "$PWD/build"
+
+          if [ -n "$WORKSPACE" ]; then
+            xcodebuild archive \
+              -workspace "$WORKSPACE" \
               -scheme App \
               -configuration Release \
               -sdk iphoneos \
               -destination 'generic/platform=iOS' \
-              -archivePath "<LaTex>PWD/build/App.xcarchive" \               CODE_SIGNING_ALLOWED=NO \               CODE_SIGNING_REQUIRED=NO \               COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee "</LaTex>PWD/xcodebuild.log"
-          else
-            xcodebuild archive \
-              -project "<LaTex>PROJECT" \               -scheme App \               -configuration Release \               -sdk iphoneos \               -destination 'generic/platform=iOS' \               -archivePath "</LaTex>PWD/build/App.xcarchive" \
+              -archivePath "$ARCHIVE_PATH" \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGNING_REQUIRED=NO \
               COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee "$PWD/xcodebuild.log"
+          elif [ -n "$PROJECT" ]; then
+            xcodebuild archive \
+              -project "$PROJECT" \
+              -scheme App \
+              -configuration Release \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              -archivePath "$ARCHIVE_PATH" \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee "$PWD/xcodebuild.log"
+          else
+            echo 'No Xcode workspace or project was found under ios/' >&2
+            exit 1
           fi
 
       - name: Upload Xcode diagnostic log
@@ -27,3 +119,10 @@
           name: xcodebuild-log
           path: ios/**/xcodebuild.log
           if-no-files-found: ignore
+
+      - name: Upload iOS archive artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-archive
+          path: ios/**/build/App.xcarchive
