@@ -59,8 +59,11 @@ jobs:
       - name: Add Capacitor iOS platform when missing
         shell: bash
         run: |
-          if [ -d "ios" ]; then
-            echo "ios directory already exists; keeping the existing native project"
+          if [ -d "ios/App" ]; then
+            echo "iOS platform App directory already exists; skipping add"
+          elif [ -d "ios" ]; then
+            echo "ios directory exists, adding ios platform..."
+            npx cap add ios --force || true
           else
             npx cap add ios
           fi
